@@ -300,7 +300,7 @@ NEWDIR="pv"
 SINGLE_FILE="pv.txt"
 COMMAND="oc get pv"
 
-${COMMAND} > ${DUMP_DIR}/status/pv.txt
+${COMMAND} > ${DUMP_DIR}/status/pv.txt 2>&1
 
 create_dir
 execute_command
@@ -316,7 +316,7 @@ NEWDIR="pvc"
 SINGLE_FILE="pvc.txt"
 COMMAND="oc get pvc"
 
-${COMMAND} > ${DUMP_DIR}/status/pvc.txt
+${COMMAND} > ${DUMP_DIR}/status/pvc.txt 2>&1
 
 create_dir
 execute_command
@@ -335,27 +335,36 @@ THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD} /bin/bash -c "env | grep 'THR
 echo -e "\nAPICAST POD: ${APICAST_POD}\nAPICAST ROUTE: ${APICAST_ROUTE}\nWILDCARD POD: ${WILDCARD_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n"
 sleep 3
 
-# 11. Status: 3scale Echo API #
 
-echo -e "\n11. Status: 3scale Echo API"
+# 11. Status: Node #
+
+echo -e "\n11. Status: Node"
+
+oc describe node > ${DUMP_DIR}/status/node.txt 2>&1
+
+
+# 12. Status: 3scale Echo API #
+
+echo -e "\n12. Status: 3scale Echo API"
 
 timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -k -v https://echo-api.3scale.net" > ${DUMP_DIR}/status/3scale-echo-api.txt 2>&1 < /dev/null
 
 
-# 12. Status: Staging/Production Backend JSON #
+# 13. Status: Staging/Production Backend JSON #
 
-echo -e "\n12. Status: Staging/Production Backend JSON"
+echo -e "\n13. Status: Staging/Production Backend JSON"
 
 timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging-json-debug.txt < /dev/null
 
 timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production-json-debug.txt < /dev/null
 
 
-# 13. Status: Certificate #
+# 14. Status: Certificate #
 
-echo -e "\n13. Status: Certificate"
+echo -e "\n14. Status: Certificate"
 
 timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE}:443" > ${DUMP_DIR}/status/apicast-production-certificate.txt 2>&1 < /dev/null
+
 
 
 # Compact the Directory
