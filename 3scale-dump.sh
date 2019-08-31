@@ -326,13 +326,15 @@ cleanup
 
 APICAST_POD=$(oc get pod | grep -i "apicast-production" | head -n 1 | awk '{print $1}')
 
+APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | head -n 1 | awk '{print $1}')
+
 APICAST_ROUTE=$(oc get route | grep -i "apicast-production" | grep -v NAME | head -n 1 | awk '{print $2}')
 
 WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -v NAME | head -n 1 | awk '{print $1}')
 
 THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
 
-echo -e "\nAPICAST POD: ${APICAST_POD}\nAPICAST ROUTE: ${APICAST_ROUTE}\nWILDCARD POD: ${WILDCARD_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n"
+echo -e "\nAPICAST POD: ${APICAST_POD}\nAPICAST_POD_STG: ${APICAST_POD_STG}\nAPICAST ROUTE: ${APICAST_ROUTE}\nWILDCARD POD: ${WILDCARD_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}"
 sleep 3
 
 
@@ -347,7 +349,9 @@ oc describe node > ${DUMP_DIR}/status/node.txt 2>&1
 
 echo -e "\n12. Status: 3scale Echo API"
 
-timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -k -v https://echo-api.3scale.net" > ${DUMP_DIR}/status/3scale-echo-api.txt 2>&1 < /dev/null
+timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -k -v https://echo-api.3scale.net" > ${DUMP_DIR}/status/3scale-echo-api-production.txt 2>&1 < /dev/null
+
+timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -v https://echo-api.3scale.net" > ${DUMP_DIR}/status/3scale-echo-api-staging.txt 2>&1 < /dev/null
 
 
 # 13. Status: Staging/Production Backend JSON #
