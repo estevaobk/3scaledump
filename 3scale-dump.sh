@@ -326,9 +326,13 @@ cleanup
 
 APICAST_POD=$(oc get pod | grep -i "apicast-production" | head -n 1 | awk '{print $1}')
 
+APICAST_ROUTE=$(oc get route | grep -i "apicast-production" | grep -v NAME | head -n 1 | awk '{print $2}')
+
+WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -v NAME | head -n 1 | awk '{print $1}')
+
 THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
 
-echo -e "\nAPICAST POD: ${APICAST_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n"
+echo -e "\nAPICAST POD: ${APICAST_POD}\nAPICAST ROUTE: ${APICAST_ROUTE}\nWILDCARD POD: ${WILDCARD_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n"
 sleep 3
 
 # 11. Status: 3scale Echo API #
@@ -345,6 +349,13 @@ echo -e "\n12. Status: Staging/Production Backend JSON"
 timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging-json-debug.txt < /dev/null
 
 timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production-json-debug.txt < /dev/null
+
+
+# 13. Status: Certificate #
+
+echo -e "\n13. Status: Certificate"
+
+timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE}:443" > ${DUMP_DIR}/status/apicast-production-certificate.txt 2>&1 < /dev/null
 
 
 # Compact the Directory
