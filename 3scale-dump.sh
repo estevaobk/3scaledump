@@ -13,6 +13,121 @@ DUMP_FILE="${CURRENT_DIR}/3scale-dump.tar"
 
 DUMP_DIR="${CURRENT_DIR}/3scale-dump"
 
+# Functions #
+
+create_dir() {
+    if [[ -z ${NEWDIR} ]]; then
+        echo -e "\n# [Error] Variable Not Found: NEWDIR #\n"
+        exit 1
+
+    elif [[ ${SINGLE} == 0 ]]; then
+        mkdir -pv ${DUMP_DIR}/${NEWDIR}
+
+        if [[ ! -d ${DUMP_DIR}/${NEWDIR} ]]; then
+            echo -e "\n# [Error] Unable to create: ${DUMP_DIR}/${NEWDIR} #\n"
+            exit 1
+        fi
+    fi
+
+    if [[ -z ${SINGLE_FILE} ]]; then
+        echo -e "\n# [Error] Variable Not Found: SINGLE_FILE #\n"
+        exit 1
+
+    elif [[ -f ${DUMP_DIR}/${SINGLE_FILE} ]]; then
+        /bin/rm -fv ${DUMP_DIR}/${SINGLE_FILE}
+
+        if [[ -f ${SINGLE_FILE} ]]; then
+            echo -e "# [Error] Unable to delete: ${DUMP_DIR}/${SINGLE_FILE} #\n"
+            exit 1
+        fi
+    fi
+}
+
+execute_command() {
+    if [[ -z ${COMMAND} ]]; then
+        echo -e "\n# [Error] Variable Not Found: COMMAND #\n"
+        exit 1
+
+    else
+        ${COMMAND} | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
+    fi
+}
+
+
+read_obj() {
+    if [[ -z ${NOYAML} ]]; then
+        YAML="-o yaml"
+
+    else
+        unset YAML
+    fi
+
+    if [[ ${VALIDATE_PODS} == 1 ]]; then
+        while read OBJ; do
+            FOUND=0
+            for POD in "${THREEESCALE_PODS[@]}"; do
+                if ( [[ ${SUBSTRING} == 1 ]] && [[ "${OBJ}" == *"${POD}"* ]] ) || ( [[ "${OBJ}" == "${POD}" ]] ); then
+                    FOUND=1
+                fi
+            done  
+
+            if [[ ! ${FOUND} == 1 ]]; then
+                echo -e "Skipping: ${OBJ}"
+
+            else
+
+                if [[ ${VERBOSE} == 1 ]]; then
+                    echo -e "\nProcess: ${OBJ}"
+                fi
+
+                if [[ ${SINGLE} == 1 ]] && [[ ! ${COMPRESS} == 1 ]]; then
+                    ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
+
+                else
+                    ${COMMAND} ${OBJ} ${YAML} > ${DUMP_DIR}/${NEWDIR}/${OBJ}.txt 2>&1
+
+                    if [[ ${COMPRESS} == 1 ]]; then
+                        gzip -f ${DUMP_DIR}/${NEWDIR}/${OBJ}.txt
+                    fi
+                fi
+            fi
+        
+        done < ${DUMP_DIR}/temp.txt
+
+    else
+        while read OBJ; do
+            if [[ ${VERBOSE} == 1 ]]; then
+                echo -e "\nProcess: ${OBJ}"
+            fi
+
+            if [[ ${SINGLE} == 1 ]] && [[ ! ${COMPRESS} == 1 ]]; then
+                ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
+
+            else
+                ${COMMAND} ${OBJ} ${YAML} > ${DUMP_DIR}/${NEWDIR}/${OBJ}.txt 2>&1
+
+                if [[ ${COMPRESS} == 1 ]]; then
+                    gzip -f ${DUMP_DIR}/${NEWDIR}/${OBJ}.txt
+                fi
+            fi
+        
+        done < ${DUMP_DIR}/temp.txt
+
+    fi
+
+    /bin/rm -f ${DUMP_DIR}/temp.txt
+}
+
+cleanup() {
+    unset COMMAND COMPRESS NEWDIR NOYAML SINGLE_FILE SUBSTRING VALIDATE_PODS VERBOSE
+}
+
+
+########
+# MAIN #
+########
+
+
 # Validate: 3scale Project Argument
 if [[ -z ${THREESCALE_PROJECT} ]]; then
     echo -e "\nUsage: 3scale_dump.sh <3SCALE PROJECT> single (optional)\n"
@@ -43,12 +158,13 @@ fi
 echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress any key to continue or <Ctrl + C> to abort...\n"
 read FOO
 
-# Create Dump Directory if it does not exist:
-if [[ ! -d ${DUMP_DIR} ]]; then
-    mkdir -pv ${DUMP_DIR}
+# Create the Dump Directory if it does not exist:
 
-    if [[ ! -d ${DUMP_DIR} ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}.\n"
+if [[ ! -d ${DUMP_DIR}/status ]]; then
+    mkdir -pv ${DUMP_DIR}/status
+
+    if [[ ! -d ${DUMP_DIR}/status ]]; then
+        echo -e "\nUnable to create: ${DUMP_DIR}/status.\n"
         exit 1
     fi
 fi
@@ -67,214 +183,173 @@ oc get event > ${DUMP_DIR}/events.txt 2>&1
 
 echo -e "\n2. Fetch: DeploymentConfig\n"
 
-# Cleanup any previous DeploymentConfig data
-if [[ ${SINGLE} == 0 ]] && [[ ! -d ${DUMP_DIR}/dc ]]; then
-    mkdir -pv ${DUMP_DIR}/dc
+NEWDIR="dc"
+SINGLE_FILE="dc.txt"
+COMMAND="oc get dc"
 
-    if [[ ! -d ${DUMP_DIR}/dc ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}/dc.\n"
-        exit 1
-    fi
+VALIDATE_PODS=1
 
-elif [[ ${SINGLE} == 1 ]] && [[ -f ${DUMP_DIR}/dc.txt ]]; then
-    /bin/rm -fv ${DUMP_DIR}/dc.txt
-fi
-
-oc get dc | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
-
-# Browse through the DeploymentConfig objects:
-while read DC; do
-    FOUND=0
-    for POD in "${THREEESCALE_PODS[@]}"; do
-        if [[ "${POD}" == "${DC}" ]]; then
-            FOUND=1
-        fi
-    done  
-
-    if [[ ! ${FOUND} == 1 ]]; then
-        echo -e "Skipping DC: ${DC}"
-
-    elif [[ ${SINGLE} == 1 ]]; then
-        oc get dc/${DC} -o yaml >> ${DUMP_DIR}/dc.txt 2>&1
-
-    else
-        oc get dc/${DC} -o yaml > ${DUMP_DIR}/dc/dc-${DC}.txt 2>&1
-    fi
-
-done < ${DUMP_DIR}/temp.txt
+create_dir
+execute_command
+read_obj
+cleanup
 
 
 # 3. Fetch and compress the logs #
 
 echo -e "\n3. Fetch: Logs\n"
 
+SINGLE_OLD=${SINGLE}
+
+SINGLE=0
+
+NEWDIR="logs"
+SINGLE_FILE="logs.txt"
+COMMAND="oc logs --all-containers"
+
+VALIDATE_PODS=1
+SUBSTRING=1
+COMPRESS=1
+VERBOSE=1
+NOYAML=1
+
 cat ${DUMP_DIR}/pods.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
 
-mkdir -pv ${DUMP_DIR}/logs
+create_dir
+read_obj
+cleanup
 
-if [[ ! -d ${DUMP_DIR}/logs ]]; then
-    echo -e "\nUnable to create: ${DUMP_DIR}/logs.\n"
-    exit 1
-fi
-
-while read OBJ; do
-    FOUND=0
-    for POD in "${THREEESCALE_PODS[@]}"; do
-        if [[ "${OBJ}" == *"${POD}"* ]]; then
-            FOUND=1
-        fi
-    done  
-
-    if [[ ! ${FOUND} == 1 ]]; then
-        echo -e "Skipping POD: ${OBJ}"
-
-    else
-        echo -e "\nLogs: ${OBJ}"
-        oc logs --all-containers ${OBJ} > ${DUMP_DIR}/logs/${OBJ}.txt 2>&1
-        gzip -f ${DUMP_DIR}/logs/${OBJ}.txt
-    fi
-
-done < ${DUMP_DIR}/temp.txt
+SINGLE=${SINGLE_OLD}
 
 
 # 4. Secrets #
 
 echo -e "\n4. Fetch: Secrets\n"
 
-if [[ ${SINGLE} == 0 ]] && [[ ! -d ${DUMP_DIR}/secrets ]]; then
-    mkdir -pv ${DUMP_DIR}/secrets
+NEWDIR="secrets"
+SINGLE_FILE="secrets.txt"
+COMMAND="oc get secret"
 
-    if [[ ! -d ${DUMP_DIR}/secrets ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}/secrets.\n"
-        exit 1
-    fi
-fi
-
-
-if [[ ${SINGLE} == 1 ]]; then
-    oc get secret -o yaml > ${DUMP_DIR}/secrets.txt 2>&1
-
-else
-    oc get secret | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
-
-    while read SECRET; do
-        oc get secret ${SECRET} -o yaml > ${DUMP_DIR}/secrets/${SECRET}.txt 2>&1
-
-    done < ${DUMP_DIR}/temp.txt
-fi
+create_dir
+execute_command
+read_obj
+cleanup
 
 
 # 5. Routes #
 
 echo -e "\n5. Fetch: Routes\n"
 
-if [[ ${SINGLE} == 0 ]] && [[ ! -d ${DUMP_DIR}/routes ]]; then
-    mkdir -pv ${DUMP_DIR}/routes
+NEWDIR="routes"
+SINGLE_FILE="routes.txt"
+COMMAND="oc get route"
 
-    if [[ ! -d ${DUMP_DIR}/routes ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}/routes.\n"
-        exit 1
-    fi
-fi
-
-
-if [[ ${SINGLE} == 1 ]]; then
-    oc get route -o yaml > ${DUMP_DIR}/routes.txt 2>&1
-
-else
-    oc get route | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
-
-    while read ROUTE; do
-        oc get route ${ROUTE} -o yaml > ${DUMP_DIR}/routes/${ROUTE}.txt 2>&1
-
-    done < ${DUMP_DIR}/temp.txt
-fi
+create_dir
+execute_command
+read_obj
+cleanup
 
 
 # 6. Services #
 
 echo -e "\n6. Fetch: Services\n"
 
-if [[ ${SINGLE} == 0 ]] && [[ ! -d ${DUMP_DIR}/services ]]; then
-    mkdir -pv ${DUMP_DIR}/services
+NEWDIR="services"
+SINGLE_FILE="services.txt"
+COMMAND="oc get service"
 
-    if [[ ! -d ${DUMP_DIR}/services ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}/services.\n"
-        exit 1
-    fi
-fi
-
-
-if [[ ${SINGLE} == 1 ]]; then
-    oc get service -o yaml > ${DUMP_DIR}/services.txt 2>&1
-
-else
-    oc get service | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
-
-    while read SERVICE; do
-        oc get service ${SERVICE} -o yaml > ${DUMP_DIR}/services/${SERVICE}.txt 2>&1
-
-    done < ${DUMP_DIR}/temp.txt
-fi
+create_dir
+execute_command
+read_obj
+cleanup
 
 
 # 7. Image Streams #
 
 echo -e "\n7. Fetch: Image Streams\n"
 
-if [[ ${SINGLE} == 0 ]] && [[ ! -d ${DUMP_DIR}/images ]]; then
-    mkdir -pv ${DUMP_DIR}/images
+NEWDIR="images"
+SINGLE_FILE="images.txt"
+COMMAND="oc get imagestream"
 
-    if [[ ! -d ${DUMP_DIR}/images ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}/images.\n"
-        exit 1
-    fi
-fi
-
-
-if [[ ${SINGLE} == 1 ]]; then
-    oc get imagestream -o yaml > ${DUMP_DIR}/images.txt 2>&1
-
-else
-    oc get imagestream | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
-
-    while read IMAGE; do
-        oc get imagestream ${IMAGE} -o yaml > ${DUMP_DIR}/images/${IMAGE}.txt
-
-    done < ${DUMP_DIR}/temp.txt
-fi
+create_dir
+execute_command
+read_obj
+cleanup
 
 
 # 8. ConfigMaps #
 
 echo -e "\n8. Fetch: ConfigMaps\n"
 
-if [[ ${SINGLE} == 0 ]] && [[ ! -d ${DUMP_DIR}/configmaps ]]; then
-    mkdir -pv ${DUMP_DIR}/configmaps
+NEWDIR="configmaps"
+SINGLE_FILE="configmaps.txt"
+COMMAND="oc get configmap"
 
-    if [[ ! -d ${DUMP_DIR}/configmaps ]]; then
-        echo -e "\nUnable to create: ${DUMP_DIR}/configmaps.\n"
-        exit 1
-    fi
-fi
-
-
-if [[ ${SINGLE} == 1 ]]; then
-    oc get configmap -o yaml > ${DUMP_DIR}/configmaps.txt 2>&1
-
-else
-    oc get configmap | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
-
-    while read CONFIGMAP ; do
-        oc get configmap ${CONFIGMAP} -o yaml > ${DUMP_DIR}/configmaps/${CONFIGMAP}.txt
-
-    done < ${DUMP_DIR}/temp.txt
-fi
+create_dir
+execute_command
+read_obj
+cleanup
 
 
-# Compress the Directory
+# 9. PV #
 
-/bin/rm -f ${DUMP_DIR}/temp.txt
+echo -e "\n9. Fetch: PV\n"
+
+NEWDIR="pv"
+SINGLE_FILE="pv.txt"
+COMMAND="oc get pv"
+
+${COMMAND} > ${DUMP_DIR}/status/pv.txt
+
+create_dir
+execute_command
+read_obj
+cleanup
+
+
+# 10. PVC #
+
+echo -e "\n10. Fetch: PVC\n"
+
+NEWDIR="pvc"
+SINGLE_FILE="pvc.txt"
+COMMAND="oc get pvc"
+
+${COMMAND} > ${DUMP_DIR}/status/pvc.txt
+
+create_dir
+execute_command
+read_obj
+cleanup
+
+
+APICAST_POD=$(oc get pod | grep -i "apicast-production" | head -n 1 | awk '{print $1}')
+
+THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+
+echo -e "\nAPICAST POD: ${APICAST_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n"
+sleep 3
+
+# 11. Status: 3scale Echo API #
+
+echo -e "\n11. Status: 3scale Echo API"
+
+timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -k -v https://echo-api.3scale.net" > ${DUMP_DIR}/status/3scale-echo-api.txt 2>&1 < /dev/null
+
+
+# 12. Status: Staging/Production Backend JSON #
+
+echo -e "\n12. Status: Staging/Production Backend JSON"
+
+timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging-json-debug.txt < /dev/null
+
+timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production-json-debug.txt < /dev/null
+
+
+# Compact the Directory
+
+echo -e "\n# Compacting... #\n"
 
 if [[ -f ${DUMP_FILE} ]]; then
     /bin/rm -f ${DUMP_FILE}
