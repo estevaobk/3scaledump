@@ -2,6 +2,8 @@
 
 THREESCALE_PROJECT="${1}"
 
+COMPRESS_UTIL="${2,,}"
+
 CURRENT_DIR=$(dirname "$0")
 
 # Avoid fetching information about any pod that is not a 3scale one
@@ -97,7 +99,7 @@ read_obj() {
             fi
 
             if [[ ${COMPRESS} == 1 ]]; then
-                ${COMMAND} ${OBJ} ${YAML} 2>&1 | gzip -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}.gz
+                ${COMMAND} ${OBJ} ${YAML} 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}.${COMPRESS_FORMAT}
 
             else
                 ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
@@ -157,7 +159,7 @@ cleanup_dir() {
         fi
 
         if [[ ${COMPRESS} == 1 ]]; then
-            /bin/rm -fv ${TARGET_DIR}/*.gz
+            /bin/rm -fv ${TARGET_DIR}/*.${COMPRESS_FORMAT}
 
         else
             /bin/rm -fv ${TARGET_DIR}/{*.txt,*.json,*.yml,*.yaml}
@@ -175,10 +177,11 @@ cleanup_dir() {
 ########
 
 
-# Validate: 3scale Project Argument
+# Validate Argument: 3scale project #
+
 if [[ -z ${THREESCALE_PROJECT} ]]; then
-    echo -e "\nUsage: 3scale_dump.sh <3SCALE PROJECT>\n"
-    exit 1
+    MSG="Usage: 3scale_dump.sh [3SCALE PROJECT] [COMPRESS UTIL (Optional)]"
+    print_error
 
 else
 
@@ -186,8 +189,8 @@ else
     OC_PROJECT=$(oc get project | awk '{print $1}' | grep "${THREESCALE_PROJECT}")
 
     if [[ ! "${OC_PROJECT}" == "${THREESCALE_PROJECT}" ]]; then
-        echo -e "\nProject not found: ${THREESCALE_PROJECT}. Ensure that you are logged in and specified the correct project.\n"
-        exit 1
+        MSG="Project not found: ${THREESCALE_PROJECT}. Ensure that you are logged in and specified the correct project."
+        print_error
 
     else
         # Change to the 3scale project
@@ -196,8 +199,44 @@ else
 fi
 
 
+# Validate Argument: Compress Util #
+
+# Attempt to auto-detect the COMPRESS_UTIL if not specified
+if [[ -z ${COMPRESS_UTIL} ]] || [[ "${COMPRESS_UTIL}" == "auto" ]]; then
+    XZ_COMMAND=$(command -v xz 2>&1)
+
+    XZ_VERSION=$(xz --version 2>&1)
+
+    if [[ -n ${XZ_COMMAND} ]] && [[ "${XZ_VERSION,,}" == *"xz utils"* ]]; then
+        echo -e "\nXZ util found:\n\n~~~\n${XZ_VERSION}\n~~~\n"
+        COMPRESS_UTIL="xz"
+        COMPRESS_FORMAT="${COMPRESS_UTIL}"
+
+    else
+        echo -e "\nXZ util not found: using gzip\n"
+        COMPRESS_UTIL="gzip"
+        COMPRESS_FORMAT="gz"
+    fi
+
+elif [[ ${COMPRESS_UTIL} == "gz" ]]; then
+    COMPRESS_UTIL="gzip"
+    COMPRESS_FORMAT="gz"
+
+elif [[ ${COMPRESS_UTIL} == "gzip" ]]; then
+    COMPRESS_FORMAT="gz"
+
+elif [[ ${COMPRESS_UTIL} == "xz" ]]; then
+    COMPRESS_FORMAT="${COMPRESS_UTIL}"
+
+else
+    MSG="Invalid Compress Util: ${COMPRESS_UTIL} (Values: gzip, xz)"
+    print_error
+fi
+
+
 echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress any key to continue or <Ctrl + C> to abort...\n"
 read TEMP
+
 
 # Create the Dump Directory if it does not exist:
 
@@ -256,7 +295,13 @@ create_dir
 read_obj
 cleanup
 
-echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+if [[ ${COMPRESS_UTIL} == "xz" ]]; then
+    echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+
+else
+    echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+fi
+
 chmod +x ${DUMP_DIR}/logs/uncompress-logs.sh
 
 
@@ -452,7 +497,7 @@ if [[ -f ${DUMP_FILE} ]]; then
     fi
 fi
 
-tar cpf ${DUMP_FILE} ${DUMP_DIR}
+tar cpf ${DUMP_FILE} --xform s:'./':: ${DUMP_DIR}
 
 if [[ ! -f ${DUMP_FILE} ]]; then
     MSG="There was an error creating ${DUMP_FILE}"
