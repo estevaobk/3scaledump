@@ -493,7 +493,6 @@ execute_command
 cleanup
 
 while read POD; do
-    POD=$(echo "${POD}" | awk '{print $1}')
     RUNASUSER=$(oc get pod ${POD} -o yaml | grep "runAsUser" | head -n 1 | cut -d ":" -f 2 | sed "s@ @@g")
 
     echo -e "\nPod: ${POD} | RunAsUser: ${RUNASUSER}" >> ${DUMP_DIR}/status/pods-run-as-user.txt
