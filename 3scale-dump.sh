@@ -234,7 +234,7 @@ else
 fi
 
 
-echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress any key to continue or <Ctrl + C> to abort...\n"
+echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
 read TEMP
 
 
