@@ -39,7 +39,8 @@ create_dir() {
 
     else
         if [[ ! -d ${DUMP_DIR}/${NEWDIR} ]]; then
-            mkdir -pv ${DUMP_DIR}/${NEWDIR}
+            MKDIR=$(mkdir -pv ${DUMP_DIR}/${NEWDIR} 2>&1)
+            echo -e "\t${MKDIR}"
         fi
 
         if [[ ! -d ${DUMP_DIR}/${NEWDIR} ]]; then
@@ -71,7 +72,6 @@ execute_command() {
 read_obj() {
     if [[ -z ${NOYAML} ]]; then
         YAML="-o yaml"
-
     else
         unset YAML
     fi
@@ -91,11 +91,11 @@ read_obj() {
         fi
 
         if [[ ! ${FOUND} == 1 ]]; then
-            echo -e "Skipping: ${OBJ}"
+            echo -e "\tSkipping: ${OBJ}"
 
         else
             if [[ ${VERBOSE} == 1 ]]; then
-                echo -e "\nProcess: ${OBJ}"
+                echo -e "\n\tProcess: ${OBJ}"
             fi
 
             if [[ ${COMPRESS} == 1 ]]; then
@@ -159,13 +159,23 @@ cleanup_dir() {
         fi
 
         if [[ ${COMPRESS} == 1 ]]; then
-            /bin/rm -fv ${TARGET_DIR}/*.${COMPRESS_FORMAT}
+            REMOVE=$(/bin/rm -fv ${TARGET_DIR}/*.${COMPRESS_FORMAT} 2>&1)
 
-        else
-            /bin/rm -fv ${TARGET_DIR}/{*.txt,*.json,*.yml,*.yaml}
+            while read ITEM; do
+                echo -e "\t\t${ITEM}"
+            done <<< "${REMOVE}"
+
+        else   
+            REMOVE=$(/bin/rm -fv ${TARGET_DIR}/{*.txt,*.json,*.yml,*.yaml} 2>&1)
+
+            while read ITEM; do
+                echo -e "\t\t${ITEM}"
+            done <<< "${REMOVE}"  
         fi
 
-        echo ; rmdir -v ${TARGET_DIR} ; echo
+        RMDIR=$(rmdir -v ${TARGET_DIR} 2>&1)
+
+        echo -e "\n\t${RMDIR}\n"
     fi
 
     unset TARGET_DIR COMPRESS
@@ -241,7 +251,11 @@ read TEMP
 # Create the Dump Directory if it does not exist:
 
 if [[ ! -d ${DUMP_DIR}/status/apicast-staging ]] || [[ ! -d ${DUMP_DIR}/status/apicast-production ]]; then
-    mkdir -pv ${DUMP_DIR}/status/{apicast-staging,apicast-production}
+    MKDIR=$(mkdir -pv ${DUMP_DIR}/status/{apicast-staging,apicast-production} 2>&1)
+
+    while read ITEM; do
+        echo -e "\t${ITEM}"
+    done <<< "${MKDIR}"
 
     if [[ ! -d ${DUMP_DIR}/status/apicast-staging ]] || [[ ! -d ${DUMP_DIR}/status/apicast-production ]]; then
         MSG="Unable to create: ${DUMP_DIR}/status"
@@ -254,7 +268,9 @@ fi
 
 echo -e "\n1. Fetch: All pods and Events\n"
 
-oc get pod -o wide > ${DUMP_DIR}/status/pods.txt 2>&1
+oc get pod -o wide > ${DUMP_DIR}/status/pods-all.txt 2>&1
+
+oc get pod -o wide | grep -iv "deploy" > ${DUMP_DIR}/status/pods.txt 2>&1
 
 oc get event > ${DUMP_DIR}/status/events.txt 2>&1
 
@@ -390,6 +406,21 @@ execute_command
 read_obj
 cleanup
 
+NEWDIR="pv/describe"
+SINGLE_FILE="pv/describe.txt"
+COMMAND="oc get pv"
+
+create_dir
+execute_command
+cleanup
+
+while read PV; do
+    DESCRIBE=$(oc describe pv ${PV} 2>&1)
+
+    echo -e "${DESCRIBE}" > ${DUMP_DIR}/pv/describe/${PV}.txt
+    echo -e "\n${DESCRIBE}" >> ${DUMP_DIR}/pv/describe.txt
+done < ${DUMP_DIR}/temp.txt
+
 
 # 10. PVC #
 
@@ -406,30 +437,66 @@ execute_command
 read_obj
 cleanup
 
+NEWDIR="pvc/describe"
+SINGLE_FILE="pvc/describe.txt"
+COMMAND="oc get pvc"
 
-# 11. Status: Node #
+create_dir
+execute_command
+cleanup
 
-echo -e "\n11. Status: Node"
+while read PVC; do
+    DESCRIBE=$(oc describe pvc ${PVC} 2>&1)
+
+    echo -e "${DESCRIBE}" > ${DUMP_DIR}/pvc/describe/${PVC}.txt
+    echo -e "\n${DESCRIBE}" >> ${DUMP_DIR}/pvc/describe.txt
+done < ${DUMP_DIR}/temp.txt
+
+
+# 11. ServiceAccounts #
+
+echo -e "\n11. Fetch: ServiceAccounts\n"
+
+NEWDIR="serviceaccounts"
+SINGLE_FILE="serviceaccounts.yaml"
+COMMAND="oc get serviceaccount"
+
+create_dir
+execute_command
+read_obj
+cleanup
+
+
+# 12. Status: Node #
+
+echo -e "\n12. Status: Node"
 
 oc describe node > ${DUMP_DIR}/status/node.txt 2>&1
 
 
-# Variables used on 12+ #
+# Variables used on 13+ #
 
-APICAST_POD_PRD=$(oc get pod | grep -i "apicast-production" | head -n 1 | awk '{print $1}')
-APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | head -n 1 | awk '{print $1}')
+APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
 
-MGMT_API_PRD=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
-MGMT_API_STG=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+if [[ -n ${APICAST_POD_STG} ]]; then
+    MGMT_API_STG=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+    APICAST_ROUTE_STG=$(oc get route | grep -i "apicast-staging" | grep -v NAME | head -n 1 | awk '{print $2}')
+fi
 
-APICAST_ROUTE_PRD=$(oc get route | grep -i "apicast-production" | grep -v NAME | head -n 1 | awk '{print $2}')
-APICAST_ROUTE_STG=$(oc get route | grep -i "apicast-staging" | grep -v NAME | head -n 1 | awk '{print $2}')
+APICAST_POD_PRD=$(oc get pod | grep -i "apicast-production" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
 
-WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -v NAME | head -n 1 | awk '{print $1}')
+if [[ -n ${APICAST_POD_PRD} ]]; then
+    MGMT_API_PRD=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+    APICAST_ROUTE_PRD=$(oc get route | grep -i "apicast-production" | grep -v NAME | head -n 1 | awk '{print $2}')
+fi
 
-THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -iv "deploy" | grep -v NAME | head -n 1 | awk '{print $1}')
 
-echo -e "\nAPICAST_POD_PRD: ${APICAST_POD_PRD}\nAPICAST_POD_STG: ${APICAST_POD_STG}\nMGMT_API_PRD: ${MGMT_API_PRD}\nMGMT_API_STG: ${MGMT_API_STG}\nAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\nAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\nWILDCARD POD: ${WILDCARD_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}"
+if [[ -n ${APICAST_POD_STG} ]]; then
+    THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+fi
+
+echo -e "\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}"
 sleep 3
 
 echo -e '#!/bin/bash\n\nfor FILE in *.json; do\n\tpython -m json.tool ${FILE} > ${FILE}.filtered ; sleep 0.5 ; mv -f ${FILE}.filtered ${FILE}\n\ndone' > ${DUMP_DIR}/status/apicast-staging/python-json.sh
@@ -439,58 +506,73 @@ echo -e '#!/bin/bash\n\nfor FILE in *.json; do\n\tpython -m json.tool ${FILE} > 
 chmod +x ${DUMP_DIR}/status/apicast-production/python-json.sh
 
 
-# 12. Status: 3scale Echo API #
+# 13. Status: 3scale Echo API #
 
-echo -e "\n12. Status: 3scale Echo API"
+echo -e "\n13. Status: 3scale Echo API"
 
-timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-staging/3scale-echo-api-staging.txt 2>&1 < /dev/null
+if [[ -n ${APICAST_POD_STG} ]]; then
+    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-staging/3scale-echo-api-staging.txt 2>&1 < /dev/null
+fi
 
-timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-production/3scale-echo-api-production.txt 2>&1 < /dev/null
-
-
-# 13. Status: Staging/Production Backend JSON #
-
-echo -e "\n13. Status: Staging/Production Backend JSON"
-
-timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
-
-timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
+if [[ -n ${APICAST_POD_PRD} ]]; then
+    timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-production/3scale-echo-api-production.txt 2>&1 < /dev/null
+fi
 
 
-# 14. Status: Management API #
+# 14. Status: Staging/Production Backend JSON #
 
-echo -e "\n14. Status: Management API"
+echo -e "\n14. Status: Staging/Production Backend JSON"
 
-OUTPUT="${DUMP_DIR}/status/apicast-production/mgmt-api"
-APICAST_POD="${APICAST_POD_PRD}"
-MGMT_API="${MGMT_API_PRD}"
+if [[ -n ${APICAST_POD_STG} ]]; then
+    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
+fi
 
-mgmt_api
-
-
-OUTPUT="${DUMP_DIR}/status/apicast-staging/mgmt-api"
-APICAST_POD="${APICAST_POD_STG}"
-MGMT_API="${MGMT_API_STG}"
-
-mgmt_api
+if [[ -n ${APICAST_POD_PRD} ]]; then
+    timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
+fi
 
 
-# 15. Status: Certificate #
+# 15. Status: Management API #
 
-echo -e "\n15. Status: Certificate"
+echo -e "\n15. Status: Management API"
 
-timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate.txt 2>&1 < /dev/null
+if [[ -n ${APICAST_POD_STG} ]]; then
+    OUTPUT="${DUMP_DIR}/status/apicast-staging/mgmt-api"
+    APICAST_POD="${APICAST_POD_STG}"
+    MGMT_API="${MGMT_API_STG}"
 
-timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate.txt 2>&1 < /dev/null
+    mgmt_api
+fi
+
+if [[ -n ${APICAST_POD_PRD} ]]; then
+    OUTPUT="${DUMP_DIR}/status/apicast-production/mgmt-api"
+    APICAST_POD="${APICAST_POD_PRD}"
+    MGMT_API="${MGMT_API_PRD}"
+
+    mgmt_api
+fi
 
 
-# 16. Status: Project and Pods 'runAsUser' (Database RW issues) #
+# 16. APIcast Status: APIcast Certificates #
+
+echo -e "\n16. Status: APIcast Certificates"
+
+if [[ -n ${APICAST_POD_STG} ]]; then
+    timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate.txt 2>&1 < /dev/null
+fi
+
+if [[ -n ${APICAST_POD_PRD} ]]; then
+    timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate.txt 2>&1 < /dev/null
+fi
+
+
+# 17. Status: Project and Pods 'runAsUser' (Database RW issues) #
+
+echo -e "\n17. Status: Status: Project and Pods 'runAsUser'"
 
 oc get project ${THREESCALE_PROJECT} -o yaml > ${DUMP_DIR}/status/project.txt
 
-COMMAND="oc get pod"
-execute_command
-cleanup
+cat ${DUMP_DIR}/status/pods.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
 
 while read POD; do
     RUNASUSER=$(oc get pod ${POD} -o yaml | grep "runAsUser" | head -n 1 | cut -d ":" -f 2 | sed "s@ @@g")
@@ -526,12 +608,14 @@ else
 
     sleep 3
 
-    /bin/rm -fv ${DUMP_DIR}/status/apicast-staging/python-json.sh
-
+    REMOVE=$(/bin/rm -fv ${DUMP_DIR}/status/apicast-staging/python-json.sh 2>&1)
+    echo -e "\t\t${REMOVE}"
+    
     TARGET_DIR="status/apicast-staging"
     cleanup_dir
 
-    /bin/rm -fv ${DUMP_DIR}/status/apicast-production/python-json.sh
+    REMOVE=$(/bin/rm -fv ${DUMP_DIR}/status/apicast-production/python-json.sh 2>&1)
+    echo -e "\t\t${REMOVE}"   
 
     TARGET_DIR="status/apicast-production"
     cleanup_dir
@@ -542,7 +626,8 @@ else
     TARGET_DIR="dc"
     cleanup_dir
 
-    /bin/rm -fv ${DUMP_DIR}/logs/uncompress-logs.sh
+    REMOVE=$(/bin/rm -fv ${DUMP_DIR}/logs/uncompress-logs.sh 2>&1)
+    echo -e "\t\t${REMOVE}"   
 
     TARGET_DIR="logs"
     COMPRESS=1
@@ -563,10 +648,19 @@ else
     TARGET_DIR="configmaps"
     cleanup_dir
 
+    TARGET_DIR="pv/describe"
+    cleanup_dir
+
     TARGET_DIR="pv"
     cleanup_dir
 
+    TARGET_DIR="pvc/describe"
+    cleanup_dir
+
     TARGET_DIR="pvc"
+    cleanup_dir
+
+    TARGET_DIR="serviceaccounts"
     cleanup_dir
 
     TARGET_DIR="dump_dir"
