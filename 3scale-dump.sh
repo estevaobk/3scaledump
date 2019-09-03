@@ -484,6 +484,23 @@ timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect
 timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo | openssl s_client -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate.txt 2>&1 < /dev/null
 
 
+# 16. Status: Project and Pods 'runAsUser' (Database RW issues) #
+
+oc get project ${THREESCALE_PROJECT} -o yaml > ${DUMP_DIR}/status/project.txt
+
+COMMAND="oc get pod"
+execute_command
+cleanup
+
+while read POD; do
+    POD=$(echo "${POD}" | awk '{print $1}')
+    RUNASUSER=$(oc get pod ${POD} -o yaml | grep "runAsUser" | head -n 1 | cut -d ":" -f 2 | sed "s@ @@g")
+
+    echo -e "\nPod: ${POD} | RunAsUser: ${RUNASUSER}" >> ${DUMP_DIR}/status/pods-run-as-user.txt
+
+done < ${DUMP_DIR}/temp.txt
+
+
 # Compact the Directory
 
 echo -e "\n# Compacting... #\n"
