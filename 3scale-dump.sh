@@ -96,15 +96,12 @@ read_obj() {
                 echo -e "\nProcess: ${OBJ}"
             fi
 
-            ${COMMAND} ${OBJ} ${YAML} > ${DUMP_DIR}/${NEWDIR}/${OBJ}.yaml 2>&1
-
             if [[ ${COMPRESS} == 1 ]]; then
-                mv -f ${DUMP_DIR}/${NEWDIR}/${OBJ}.yaml ${DUMP_DIR}/${NEWDIR}/${OBJ}.txt
-                gzip -f ${DUMP_DIR}/${NEWDIR}/${OBJ}.txt
+                ${COMMAND} ${OBJ} ${YAML} 2>&1 | gzip -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}.gz
 
             else
                 ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
-
+                ${COMMAND} ${OBJ} ${YAML} > ${DUMP_DIR}/${NEWDIR}/${OBJ}.yaml 2>&1
             fi
 
         fi
@@ -145,6 +142,31 @@ mgmt_api() {
 
 cleanup() {
     unset COMMAND COMPRESS NEWDIR NOYAML SINGLE_FILE SUBSTRING VALIDATE_PODS VERBOSE
+}
+
+cleanup_dir() {
+    if [[ -z ${TARGET_DIR} ]]; then
+        MSG="Variable Not Found: TARGET_DIR"
+        print_error
+
+    else
+        if [[ ${TARGET_DIR,,} == "dump_dir" ]]; then
+            TARGET_DIR="${DUMP_DIR}"
+        else
+            TARGET_DIR="${DUMP_DIR}/${TARGET_DIR}"
+        fi
+
+        if [[ ${COMPRESS} == 1 ]]; then
+            /bin/rm -fv ${TARGET_DIR}/*.gz
+
+        else
+            /bin/rm -fv ${TARGET_DIR}/{*.txt,*.json,*.yml,*.yaml}
+        fi
+
+        echo ; rmdir -v ${TARGET_DIR} ; echo
+    fi
+
+    unset TARGET_DIR COMPRESS
 }
 
 
@@ -233,6 +255,9 @@ cat ${DUMP_DIR}/status/pods.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/te
 create_dir
 read_obj
 cleanup
+
+echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+chmod +x ${DUMP_DIR}/logs/uncompress-logs.sh
 
 
 # 4. Secrets #
@@ -362,6 +387,12 @@ THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 
 echo -e "\nAPICAST_POD_PRD: ${APICAST_POD_PRD}\nAPICAST_POD_STG: ${APICAST_POD_STG}\nMGMT_API_PRD: ${MGMT_API_PRD}\nMGMT_API_STG: ${MGMT_API_STG}\nAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\nAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\nWILDCARD POD: ${WILDCARD_POD}\nTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}"
 sleep 3
 
+echo -e '#!/bin/bash\n\nfor FILE in *.json; do\n\tpython -m json.tool ${FILE} > ${FILE}.filtered ; sleep 0.5 ; mv -f ${FILE}.filtered ${FILE}\n\ndone' > ${DUMP_DIR}/status/apicast-staging/python-json.sh
+chmod +x ${DUMP_DIR}/status/apicast-staging/python-json.sh
+
+echo -e '#!/bin/bash\n\nfor FILE in *.json; do\n\tpython -m json.tool ${FILE} > ${FILE}.filtered ; sleep 0.5 ; mv -f ${FILE}.filtered ${FILE}\n\ndone' > ${DUMP_DIR}/status/apicast-production/python-json.sh
+chmod +x ${DUMP_DIR}/status/apicast-production/python-json.sh
+
 
 # 12. Status: 3scale Echo API #
 
@@ -414,15 +445,77 @@ echo -e "\n# Compacting... #\n"
 
 if [[ -f ${DUMP_FILE} ]]; then
     /bin/rm -f ${DUMP_FILE}
+
+    if [[ -f ${DUMP_FILE} ]]; then
+        MSG="There was an error deleting ${DUMP_FILE}"
+        print_error
+    fi
 fi
 
 tar cpf ${DUMP_FILE} ${DUMP_DIR}
 
 if [[ ! -f ${DUMP_FILE} ]]; then
-    echo -e "\nThere was an error creating ${DUMP_FILE}"
-    exit 1
+    MSG="There was an error creating ${DUMP_FILE}"
+    print_error
 
 else
-    echo -e "\nFile created: ${DUMP_FILE}\n\nPlease remove manually the temporary directory: ${DUMP_DIR}\n"
+    # Cleanup (less aggressive than "rm -fr ...") #
+
+    echo -e "\n# Cleanup... #\n"
+
+    sleep 3
+
+    /bin/rm -fv ${DUMP_DIR}/status/apicast-staging/python-json.sh
+
+    TARGET_DIR="status/apicast-staging"
+    cleanup_dir
+
+    /bin/rm -fv ${DUMP_DIR}/status/apicast-production/python-json.sh
+
+    TARGET_DIR="status/apicast-production"
+    cleanup_dir
+
+    TARGET_DIR="status"
+    cleanup_dir
+
+    TARGET_DIR="dc"
+    cleanup_dir
+
+    /bin/rm -fv ${DUMP_DIR}/logs/uncompress-logs.sh
+
+    TARGET_DIR="logs"
+    COMPRESS=1
+    cleanup_dir
+
+    TARGET_DIR="secrets"
+    cleanup_dir
+
+    TARGET_DIR="routes"
+    cleanup_dir
+
+    TARGET_DIR="services"
+    cleanup_dir
+
+    TARGET_DIR="images"
+    cleanup_dir
+
+    TARGET_DIR="configmaps"
+    cleanup_dir
+
+    TARGET_DIR="pv"
+    cleanup_dir
+
+    TARGET_DIR="pvc"
+    cleanup_dir
+
+    TARGET_DIR="dump_dir"
+    cleanup_dir
+
+    echo -e "\nFile created: ${DUMP_FILE}\n"
+
+    if [[ -d ${DUMP_DIR} ]]; then
+        echo -e "\nPlease remove manually the temporary directory: ${DUMP_DIR}\n"
+    fi
+    
     exit 0
 fi
