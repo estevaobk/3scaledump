@@ -63,6 +63,7 @@ From "Part 1 - Logs and Events":
 13. 3scale Echo API call from the APIcast pod: '/status/apicast-[staging/production]/3scale-echo-api-[staging/production].txt'
 
 14.1. Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/staging.json: '/status/apicast-staging/apicast-staging.json'
+
 14.2. Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/production.json: '/status/apicast-production/apicast-production.json'
 
   NOTE: Debug files from both the 'curl' calls above on '/status/apicast-[staging/production]/apicast-[staging/production]-json-debug.txt' in case 14.1 and/or 14.2 fails.
