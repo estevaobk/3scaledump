@@ -27,7 +27,7 @@ Part 1 - OpenShift related items: With the exception of logs, they are fetched b
   
 3. Logs: Compressed as either '.gz' or '.xz' on '3scale-dump/logs/[pod].[gz,xz]
   
-  NOTE: Shell Script included on '3scale-dump/logs/uncompress-logs.sh' to uncompress all the logs. This is adapted whether they are '.gz' or '.xz'.
+    NOTE: Shell Script included on '3scale-dump/logs/uncompress-logs.sh' to uncompress all the logs. This is adapted whether they are '.gz' or '.xz'.
   
 4. Secrets: '3scale-dump/secrets.yaml' and '3scale-dump/secrets/[object].yaml'.
   
@@ -41,7 +41,7 @@ Part 1 - OpenShift related items: With the exception of logs, they are fetched b
   
 9. PV: '3scale-dump/pv.yaml' and '3scale-dump/pv/[object].yaml'.
   
-  NOTE: '3scale-dump/pv/describe.txt' and '3scale-dump/pv/describe/[object].txt' for more information (describe) on the PV's.
+    NOTE: '3scale-dump/pv/describe.txt' and '3scale-dump/pv/describe/[object].txt' for more information (describe) on the PV's.
   
 10. PVC: '3scale-dump/pvc.yaml' and '3scale-dump/pvc/[object].yaml'.
   
@@ -64,11 +64,11 @@ From "Part 1 - Logs and Events":
 
 14. Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/staging.json: '/status/apicast-staging/apicast-staging.json' and Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/production.json: '/status/apicast-production/apicast-production.json'.
 
-  NOTE: Debug files from both the 'curl' calls above are located on '/status/apicast-[staging/production]/apicast-[staging/production]-json-debug.txt' in case 14. fails.
+    NOTE: Debug files from both the 'curl' calls above are located on '/status/apicast-[staging/production]/apicast-[staging/production]-json-debug.txt' in case 14. fails.
   
 15. Management API and Status: Depends on the value from the variable 'APICAST_MANAGEMENT_API'. Outputs the files 'mgmt-api-debug.json' (stderr to 'mgmt-api-debug-stderr.txt'), 'mgmt-api-debug-status-info.txt', 'mgmt-api-debug-status-live.txt' and 'mgmt-api-debug-status-ready.txt'. All of these are created for both the Sraging and Production versions from APIcast under '/status/apicast-[staging/production]'
 
-  NOTE: The script 'python-json.sh' (generated on each dump) located in the same directory as the ones above converts the single lined .jsons from both 14. and 15. into multiple lines files.
+    NOTE: The script 'python-json.sh' (generated on each dump) located in the same directory as the ones above converts the single lined .jsons from both 14. and 15. into multiple lines files.
   
 16. APIcast Certificates: Tests and validates the 3scale certificates for 'apicast-staging' and 'apicast-production'. File: '/status/apicast-[staging/production]/certificate.txt'
 
