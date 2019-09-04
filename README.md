@@ -72,4 +72,7 @@ From "Part 1 - Logs and Events":
   
 16. APIcast Certificates: Tests and validates the 3scale certificates for 'apicast-staging' and 'apicast-production'. File: '/status/apicast-[staging/production]/certificate.txt'
 
-17. Project and Pods 'runAsUser': Helps to further troubleshoot databases issues knowing the user that the PV/PVC's will be mounted from the pods: '/status/project.txt', '/status/pods-run-as-user.txt'.
+17. Project and Pods 'runAsUser': Helps to further troubleshoot database level issues knowing the user that the PV/PVC's will be mounted from the pods: '/status/project.txt', '/status/pods-run-as-user.txt'.
+
+
+NOTE: The Documentation above is just a scratch and will be much better formatted in the future.
