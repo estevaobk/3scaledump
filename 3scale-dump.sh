@@ -48,7 +48,8 @@ create_dir() {
             print_error
 
         elif [[ -f ${DUMP_DIR}/${SINGLE_FILE} ]]; then
-            /bin/rm -fv ${DUMP_DIR}/${SINGLE_FILE}
+            REMOVE=$(/bin/rm -fv ${DUMP_DIR}/${SINGLE_FILE} 2>&1)
+            echo -e "\t${REMOVE}"
 
             if [[ -f ${SINGLE_FILE} ]]; then
                 MSG="Unable to delete: ${DUMP_DIR}/${SINGLE_FILE}"
@@ -67,7 +68,6 @@ execute_command() {
         ${COMMAND} | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
     fi
 }
-
 
 read_obj() {
     if [[ -z ${NOYAML} ]]; then
@@ -204,6 +204,7 @@ else
 
     else
         # Change to the 3scale project
+        echo
         oc project ${THREESCALE_PROJECT}
     fi
 fi
@@ -418,7 +419,7 @@ while read PV; do
     DESCRIBE=$(oc describe pv ${PV} 2>&1)
 
     echo -e "${DESCRIBE}" > ${DUMP_DIR}/pv/describe/${PV}.txt
-    echo -e "\n${DESCRIBE}" >> ${DUMP_DIR}/pv/describe.txt
+    echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pv/describe.txt
 done < ${DUMP_DIR}/temp.txt
 
 
@@ -449,7 +450,7 @@ while read PVC; do
     DESCRIBE=$(oc describe pvc ${PVC} 2>&1)
 
     echo -e "${DESCRIBE}" > ${DUMP_DIR}/pvc/describe/${PVC}.txt
-    echo -e "\n${DESCRIBE}" >> ${DUMP_DIR}/pvc/describe.txt
+    echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pvc/describe.txt
 done < ${DUMP_DIR}/temp.txt
 
 
@@ -525,9 +526,13 @@ echo -e "\n14. Status: Staging/Production Backend JSON"
 
 if [[ -n ${APICAST_POD_STG} ]]; then
     timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
+
+    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-production-json-debug.txt < /dev/null
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]]; then
+    timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-production/apicast-staging-json-debug.txt < /dev/null
+
     timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
 fi
 
@@ -577,7 +582,7 @@ cat ${DUMP_DIR}/status/pods.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/te
 while read POD; do
     RUNASUSER=$(oc get pod ${POD} -o yaml | grep "runAsUser" | head -n 1 | cut -d ":" -f 2 | sed "s@ @@g")
 
-    echo -e "\nPod: ${POD} | RunAsUser: ${RUNASUSER}" >> ${DUMP_DIR}/status/pods-run-as-user.txt
+    echo -e "Pod: ${POD} | RunAsUser: ${RUNASUSER}\n" >> ${DUMP_DIR}/status/pods-run-as-user.txt
 
 done < ${DUMP_DIR}/temp.txt
 
@@ -594,6 +599,8 @@ if [[ -f ${DUMP_FILE} ]]; then
         print_error
     fi
 fi
+
+/bin/rm -f ${DUMP_DIR}/temp.txt
 
 tar cpf ${DUMP_FILE} --xform s:'./':: ${DUMP_DIR}
 
