@@ -68,7 +68,7 @@ From "Part 1 - Logs and Events":
   
 15. Management API and Status: Depends on the value from the variable 'APICAST_MANAGEMENT_API'. Outputs the files 'mgmt-api-debug.json' (stderr to 'mgmt-api-debug-stderr.txt'), 'mgmt-api-debug-status-info.txt', 'mgmt-api-debug-status-live.txt' and 'mgmt-api-debug-status-ready.txt'. All of these are created for both the Sraging and Production versions from APIcast under '/status/apicast-[staging/production]'
 
-  NOTE: The script 'python-json.sh' (generated on each dump) located in the same directory as the ones above converts the single lined .jsons from both 14. and 15. in multiple lines files.
+  NOTE: The script 'python-json.sh' (generated on each dump) located in the same directory as the ones above converts the single lined .jsons from both 14. and 15. into multiple lines files.
   
 16. APIcast Certificates: Tests and validates the 3scale certificates for 'apicast-staging' and 'apicast-production'. File: '/status/apicast-[staging/production]/certificate.txt'
 
