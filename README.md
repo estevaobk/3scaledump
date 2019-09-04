@@ -64,7 +64,7 @@ From "Part 1 - Logs and Events":
 
 14. Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/staging.json: '/status/apicast-staging/apicast-staging.json' and Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/production.json: '/status/apicast-production/apicast-production.json'.
 
-  NOTE: Debug files from both the 'curl' calls above on '/status/apicast-[staging/production]/apicast-[staging/production]-json-debug.txt' in case 14.1 and/or 14.2 fails.
+  NOTE: Debug files from both the 'curl' calls above are located on '/status/apicast-[staging/production]/apicast-[staging/production]-json-debug.txt' in case 14. fails.
   
 15. Management API and Status: Depends on the value from the variable 'APICAST_MANAGEMENT_API'. Outputs the files 'mgmt-api-debug.json' (stderr to 'mgmt-api-debug-stderr.txt'), 'mgmt-api-debug-status-info.txt', 'mgmt-api-debug-status-live.txt' and 'mgmt-api-debug-status-ready.txt'. All of these are created for both the Sraging and Production versions from APIcast under '/status/apicast-[staging/production]'
 
