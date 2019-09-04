@@ -482,6 +482,7 @@ APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | grep -iv "deploy" | h
 if [[ -n ${APICAST_POD_STG} ]]; then
     MGMT_API_STG=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
     APICAST_ROUTE_STG=$(oc get route | grep -i "apicast-staging" | grep -v NAME | head -n 1 | awk '{print $2}')
+    THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
 fi
 
 APICAST_POD_PRD=$(oc get pod | grep -i "apicast-production" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
@@ -489,15 +490,17 @@ APICAST_POD_PRD=$(oc get pod | grep -i "apicast-production" | grep -iv "deploy" 
 if [[ -n ${APICAST_POD_PRD} ]]; then
     MGMT_API_PRD=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
     APICAST_ROUTE_PRD=$(oc get route | grep -i "apicast-production" | grep -v NAME | head -n 1 | awk '{print $2}')
+
+    if [[ -z ${THREESCALE_PORTAL_ENDPOINT} ]]; then
+        THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+    fi
 fi
 
 WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -iv "deploy" | grep -v NAME | head -n 1 | awk '{print $1}')
 
-if [[ -n ${APICAST_POD_STG} ]]; then
-    THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
-fi
+SYSTEM_APP_POD=$(oc get pod | grep -i "system-app" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
 
-echo -e "\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}"
+echo -e "\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\nSYSTEM_APP_POD: ${SYSTEM_APP_POD}"
 sleep 3
 
 echo -e '#!/bin/bash\n\nfor FILE in *.json; do\n\tpython -m json.tool ${FILE} > ${FILE}.filtered ; sleep 0.5 ; mv -f ${FILE}.filtered ${FILE}\n\ndone' > ${DUMP_DIR}/status/apicast-staging/python-json.sh
@@ -575,16 +578,25 @@ fi
 
 echo -e "\n17. Status: Status: Project and Pods 'runAsUser'"
 
-oc get project ${THREESCALE_PROJECT} -o yaml > ${DUMP_DIR}/status/project.txt
+oc get project ${THREESCALE_PROJECT} -o yaml > ${DUMP_DIR}/status/project.txt 2>&1
 
 cat ${DUMP_DIR}/status/pods.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
 
 while read POD; do
     RUNASUSER=$(oc get pod ${POD} -o yaml | grep "runAsUser" | head -n 1 | cut -d ":" -f 2 | sed "s@ @@g")
 
-    echo -e "Pod: ${POD} | RunAsUser: ${RUNASUSER}\n" >> ${DUMP_DIR}/status/pods-run-as-user.txt
+    echo -e "Pod: ${POD} | RunAsUser: ${RUNASUSER}\n" >> ${DUMP_DIR}/status/pods-run-as-user.txt 2>&1
 
 done < ${DUMP_DIR}/temp.txt
+
+
+# 18. Status: Sidekiq Queue #
+
+echo -e "\n18. Status: Status: Sidekiq Queue (might take up to 3 minutes)"
+
+if [[ -n ${SYSTEM_APP_POD} ]]; then
+    timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo 'stats = Sidekiq::Stats.new' | bundle exec rails console" > ${DUMP_DIR}/status/sidekiq.txt 2>&1 < /dev/null
+fi
 
 
 # Compact the Directory
