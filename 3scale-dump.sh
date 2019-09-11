@@ -309,7 +309,7 @@ echo -e "\n${STEP}. Fetch: Logs\n"
 
 NEWDIR="logs"
 SINGLE_FILE="logs.txt"
-COMMAND="oc logs --all-containers"
+COMMAND="oc logs --timestamps=true --all-containers"
 
 VALIDATE_PODS=1
 SUBSTRING=1
