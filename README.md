@@ -136,3 +136,6 @@ Depends on the value from the variable `APICAST_MANAGEMENT_API` on both the Stag
 ## Known Issues
 
 - On `2.6 On-premises`, the `apicast-wildcard-router` pod doesn't exist anymore. This is the single pod that contains the `openssl` utility to validate both the APIcast Staging and Production certificates. This process neeeds to be executed from inside a pod, since the OpenShift Node already adds any self-generated certificate as a valid Certificate Authority (CA).
+
+- The script is not tested or validated against OpenShift Container Platform (OCP) 4.X, only 3.11. However, it's still not being widely used.
+
