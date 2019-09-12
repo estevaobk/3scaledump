@@ -121,7 +121,7 @@ Depends on the value from the variable `APICAST_MANAGEMENT_API` on both the Stag
 
 #### APIcast Certificates Validation
 
-- Files: `/status/apicast-[staging|production]/certificate.txt`
+- Files: `/status/apicast-[staging|production]/certificate.txt` and `/status/apicast-[staging|production]/certificate-showcerts.txt`
 
 #### Project and Pods 'runAsUser'
 
