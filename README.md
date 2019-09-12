@@ -1,78 +1,174 @@
-# 3scaledump
-Unofficial tool for dumping a Red Hat 3scale On-premises project.
+# Disclaimer
 
-Usage: ./3scale-dump.sh [3SCALE PROJECT] [COMPRESS UTIL (Optional)] 2>&1 | tee 3scale-dump-logs.txt
+This project is not yet officially supported or endorsed by Red Hat.
 
-3SCALE PROJECT: The official project hosting 3scale in OpenShift.
+# Description
 
-COMPRESS UTIL: gzip, xz (leave empty or "auto" for auto-detect).
+3scale dump is an unofficial shell script for dumping a Red Hat 3scale On-premises project, bringing more and better formatted information than the regular OpenShift dump script.
 
-3scale-dump-logs.txt: If anything goes wrong, just send me this file (NOTE: Don't forget the '2>&1' redirect command before the '|' character).
+# Table of Contents
+- [Usage](#usage)
+  * [Dump File](#dump-file)
+  * [Temporary Directory](#temporary-directory)  
+- [Information Fetched](#information-fetched)
+  * [OpenShift Related Configuration](#openshift-related-configuration)
+      - [Pods and Events Information](#pods-and-events-information)
+      - [DeploymentConfigs](#deploymentconfigs)
+      - [Logs](#logs)
+      - [Secrets](#secrets)
+      - [Routes](#routes)
+      - [Services](#services)
+      - [Image Streams](#image-streams)
+      - [ConfigMaps](#configmaps)
+      - [PVs - Persistent Volumes](#pvs---persistent-volumes)
+      - [PVCs - Persistent Volume Claims](#pvcs---persistent-volume-claims)
+      - [Service Accounts](#service-accounts)
+      - [Node - CPU and Memory Consumption and Limits](#node---cpu-and-memory-consumption-and-limits)      
+  * [3scale Configuration](#3scale-configuration)
+      - [3scale Echo API call - from the APIcast pod](#3scale-echo-api-call---from-the-apicast-pod)
+      - [APIcast Staging and Production JSON Configuration](#apicast-staging-and-production-json-configuration)
+      - [Management API and Status](#management-api-and-status)
+      - [APIcast Certificates Validation](#apicast-certificates-validation)
+      - [Project and Pods - runAsUser](#project-and-pods---runasuser)
+      - [Sidekiq Queue](#sidekiq-queue)
+ - [Known Issues](#known-issues)
 
-DISCLAIMER: This project is not yet officially supported or endorsed by Red Hat.
+# Usage
 
----
+Stable version in: https://raw.githubusercontent.com/estevaobk/3scaledump/1.0-stable/3scale-dump.sh
 
-File provided: '3scale-dump.tar' (it doesn't include a '.gz' or any other type of compression since the logs have already been compressed on the fly during the retrieval process)
+```
+$ ./3scale-dump.sh <3scale Project> [Compress Format] 2>&1 | tee 3scale-dump-logs.txt
 
-Directory Structure: 3scale-dump/*
+    3scale Project:  The official project hosting 3scale inside Red Hat OpenShift.
 
----
+    Compress Format: How the log files from the pods are going to be compressed.
+                     Possible values are: 'gzip', 'xz' or 'auto' for auto-detect.
+                     NOTE: Leaving this value empty is equal to 'auto'.
 
-Part 1 - OpenShift related items: With the exception of logs, they are fetched both as a single .yaml file located in '3scale-dump/[category].yaml' and also as separate .yaml files (one for each object) under '3scale-dump/[category]/[object].yaml'
+    The text file '3scale-dump-logs.txt' provides more information about the data
+    retrieval process, including if anything goes wrong.
+```
 
-1. Logs and Events: Stored in '3scale-dump/status' (disussed in the "Part 2" further below).
+## Dump File
 
-2. DeploymentConfigs: '3scale-dump/dc.yaml' and '3scale-dump/dc/[object].yaml'.
-  
-3. Logs: Compressed as either '.gz' or '.xz' on '3scale-dump/logs/[pod].[gz,xz]
-  
-    NOTE: Shell Script included on '3scale-dump/logs/uncompress-logs.sh' to uncompress all the logs. This is adapted whether they are '.gz' or '.xz'.
-  
-4. Secrets: '3scale-dump/secrets.yaml' and '3scale-dump/secrets/[object].yaml'.
-  
-5. Routes: '3scale-dump/routes.yaml' and '3scale-dump/routes/[object].yaml'.
-  
-6. Services: '3scale-dump/services.yaml' and '3scale-dump/services/[object].yaml'.
-  
-7. Image Steams: '3scale-dump/images.yaml' and '3scale-dump/images/[object].yaml'.
-  
-8. ConfigMaps: '3scale-dump/configmaps.yaml' and '3scale-dump/configmaps/[object].yaml'.
-  
-9. PV: '3scale-dump/pv.yaml' and '3scale-dump/pv/[object].yaml'.
-  
-    NOTE: '3scale-dump/pv/describe.txt' and '3scale-dump/pv/describe/[object].txt' for more information (describe) on the PV's.
-  
-10. PVC: '3scale-dump/pvc.yaml' and '3scale-dump/pvc/[object].yaml'.
-  
-    NOTE: '3scale-dump/pvc/describe.txt' and '3scale-dump/pvc/describe/[object].txt' for more information (describe) on the PVC's.
-  
-11. ServiceAccounts: '3scale-dump/serviceaccounts.yaml' and '3scale-dump/serviceaccounts/[object].yaml'.
-  
----
+After successfully executing the script, a file named `3scale-dump.tar` will exist on the current directory containing the 3scale project information. Notice that it doesn't include any sort of compression (e.g. `.tar.gz` or `.tar.xz`), since all the logs from the pods have already been compressed and hence its main purpose is to just archive all the information.
 
-Part 2 - The '3scale-dump/status' directory:
+## Temporary Directory
 
-From "Part 1 - Logs and Events":
-  - '/status/pods-all.txt': All pods (unfiltered) list.
-  - '/status/pods.txt': Filtered (non-deploy) pods list.
-  - '/status/events.txt': Output from "oc get event".
+The directory `3scale-dump` is created under the currently working one and is used as a temporary location to store the configuration files while they are being retrieved and before being archived into the **Dump File**. It's typically cleaned up automatically, unless an unexpected file or directory is present inside it.
 
-12. Node (CPU and Memory consumption and limits): '/status/node.txt'
+# Information Fetched
 
-13. 3scale Echo API call from the APIcast pod: '/status/apicast-[staging/production]/3scale-echo-api-[staging/production].txt'
+## OpenShift Related Configuration
 
-14. Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/staging.json: '/status/apicast-staging/apicast-staging.json' and Backend JSON from the ${THREESCALE_PORTAL_ENDPOINT}/production.json: '/status/apicast-production/apicast-production.json'.
+With the exception of the `Pods and Events Information`, OpenShift related configuration is fetched both in the form of a `Single File` and several `Object Files`. The same information assembled on the `Single File` is also distributed within the several `Object Files` and it's up to the Engineer to choose the preferred format of reading the data retrieved.
 
-    NOTE: Debug files from both the 'curl' calls above are located on '/status/apicast-[staging/production]/apicast-[staging/production]-json-debug.txt' in case 14. fails.
-  
-15. Management API and Status: Depends on the value from the variable 'APICAST_MANAGEMENT_API'. Outputs the files 'mgmt-api-debug.json' (stderr to 'mgmt-api-debug-stderr.txt'), 'mgmt-api-debug-status-info.txt', 'mgmt-api-debug-status-live.txt' and 'mgmt-api-debug-status-ready.txt'. All of these are created for both the Sraging and Production versions from APIcast under '/status/apicast-[staging/production]'
+#### Pods and Events Information
 
-    NOTE: The script 'python-json.sh' (generated on each dump) located in the same directory as the ones above converts the single lined .jsons from both 14. and 15. into multiple lines files.
-  
-16. APIcast Certificates: Tests and validates the 3scale certificates for 'apicast-staging' and 'apicast-production'. File: '/status/apicast-[staging/production]/certificate.txt'
+- Pods:
+  - All Pods: `/status/pods-all.txt`
+  - Running Pods: `/status/pods.txt`
+- Events: `/status/events.txt`
 
-17. Project and Pods 'runAsUser': Helps to further troubleshoot database level issues knowing the user that the PV/PVC's will be mounted from the pods: '/status/project.txt', '/status/pods-run-as-user.txt'.
+#### DeploymentConfigs
 
+- Single: `3scale-dump/dc.yaml`
+- Objects: `3scale-dump/dc/[object].yaml`
 
-<b>(The Documentation above is just a scratch and will be much better formatted in the future)</b>
+#### Logs
+
+- Files: `3scale-dump/logs/[pod].[gz,xz]`
+
+    **NOTE:** Shell Script included on `3scale-dump/logs/uncompress-logs.sh` to uncompress all the logs.
+
+#### Secrets
+
+- Single: `3scale-dump/secrets.yaml`
+- Objects: `3scale-dump/secrets/[object].yaml`
+
+#### Routes
+
+- Single: `3scale-dump/routes.yaml`
+- Objects: `3scale-dump/routes/[object].yaml`
+
+#### Services
+
+- Single: `3scale-dump/services.yaml`
+- Objects: `3scale-dump/services/[object].yaml`
+
+#### Image Streams
+
+- Single: `3scale-dump/images.yaml`
+- Objects: `3scale-dump/images/[object].yaml`
+
+#### ConfigMaps
+
+- Single: `3scale-dump/configmaps.yaml`
+- Objects: `3scale-dump/configmaps/[object].yaml`
+
+#### PVs - Persistent Volumes
+
+- Single: `3scale-dump/pv.yaml` and `3scale-dump/pv/describe.txt`
+- Objects: `3scale-dump/pv/[object].yaml` and `3scale-dump/pv/describe/[object].txt`
+
+#### PVCs - Persistent Volume Claims
+
+- Single: `3scale-dump/pvc.yaml` and `3scale-dump/pvc/describe.txt`
+- Objects: `3scale-dump/pvc/[object].yaml` and `3scale-dump/pvc/describe/[object].txt`
+
+#### Service Accounts
+
+- Single `3scale-dump/serviceaccounts.yaml`
+- Objects: `3scale-dump/serviceaccounts/[object].yaml`
+
+#### Node - CPU and Memory Consumption and Limits
+
+- File: `/status/node.txt`
+
+## 3scale Configuration
+
+The directories `apicast-staging` and `apicast-production` are created inside `/status` and should contain information related to both pods (if running). There is also some additional debug (stderr) information from the retrieval process.
+
+#### 3scale Echo API call - from the APIcast pod
+
+- Files: `/status/apicast-[staging|production]/3scale-echo-api-[staging|production].txt` 
+
+#### APIcast Staging and Production JSON Configuration
+
+- Files: `/status/apicast-[staging|production]/apicast-[staging|production].json`
+- Debug: `/status/apicast-[staging|production]/apicast-[staging|production]-json-debug.txt`
+
+#### Management API and Status
+
+Depends on the value from the variable `APICAST_MANAGEMENT_API` on both the Staging and Production APIcast pods:
+
+- Management API - Debug: `/status/apicast-[staging|production]/mgmt-api-debug.json`
+- Management API - Status: `/status/apicast-[staging|production]/mgmt-api-debug-status-[info|live|ready].txt`
+
+    **NOTE:** Shell Script included on `/status/apicast-[staging|production]/python-json.sh` to convert all the `.json` files inside the `/status/apicast-[staging|production]` directories from a single line into multiple lines in case the `python` utility is installed locally.
+
+#### APIcast Certificates Validation
+
+- Files: `/status/apicast-[staging|production]/certificate.txt` and `/status/apicast-[staging|production]/certificate-showcerts.txt`
+
+#### Project and Pods - runAsUser
+
+- Files: `/status/project.txt` and `/status/pods-run-as-user.txt`
+
+    **NOTE:** Helps to further troubleshoot database level issues knowing the user that the PV/PVC's will be mounted from the pods.
+
+#### Sidekiq Queue
+
+- File: `/status/sidekiq.txt`
+
+# Known Issues
+
+- This project needs to be added to the official 3scale repositores after its proper validation.
+
+- On `2.6 On-premises`, the `apicast-wildcard-router` pod doesn't exist anymore. This is the single pod that contains the `openssl` utility to validate both the APIcast Staging and Production certificates. This process neeeds to be executed from inside a pod, since the OpenShift Node already adds any self-generated certificate as a valid Certificate Authority (CA).
+
+- The script is not tested or validated against OpenShift Container Platform (OCP) 4.X, only 3.11. However, it's still not being widely used.
+
+- Several items raised on the JIRA **THREESCALE-2588** will need to be addressed in a future stable release (most likely `2.0-stable`).
+
