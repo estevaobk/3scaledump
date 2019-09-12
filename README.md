@@ -6,6 +6,33 @@ This project is not yet officially supported or endorsed by Red Hat.
 
 3scale dump is an unofficial shell script for dumping a Red Hat 3scale On-premises project, bringing more and better formatted information than the regular OpenShift dump script.
 
+# Table of Contents
+- [Usage](#usage)
+  * [Dump File](#dump-file)
+  * [Temporary Directory](#temporary-directory)  
+- [Information Fetched](#information-fetched)
+  * [OpenShift Related Configuration](#openshift-related-configuration)
+      - [Pods and Events Information](#pods-and-events-information)
+      - [DeploymentConfigs](#deploymentconfigs)
+      - [Logs](#logs)
+      - [Secrets](#secrets)
+      - [Routes](#routes)
+      - [Services](#services)
+      - [Image Streams](#image-streams)
+      - [ConfigMaps](#configmaps)
+      - [PVs - Persistent Volumes](#pvs---persistent-volumes)
+      - [PVCs - Persistent Volume Claims](#pvcs---persistent-volume-claims)
+      - [Service Accounts](#service-accounts)
+      - [Node - CPU and Memory Consumption and Limits](#node---cpu-and-memory-consumption-and-limits)      
+  * [3scale Configuration](#3scale-configuration)
+      - [3scale Echo API call - from the APIcast pod](#3scale-echo-api-call---from-the-apicast-pod)
+      - [APIcast Staging and Production JSON Configuration](#apicast-staging-and-production-json-configuration)
+      - [Management API and Status](#management-api-and-status)
+      - [APIcast Certificates Validation](#apicast-certificates-validation)
+      - [Project and Pods - runAsUser](#project-and-pods---runasuser)
+      - [Sidekiq Queue](#sidekiq-queue)
+ - [Known Issues](#known-issues)
+
 # Usage
 
 ```
@@ -78,12 +105,12 @@ With the exception of the `Pods and Events Information`, OpenShift related confi
 - Single: `3scale-dump/configmaps.yaml`
 - Objects: `3scale-dump/configmaps/[object].yaml`
 
-#### PVs (Persistent Volumes)
+#### PVs - Persistent Volumes
 
 - Single: `3scale-dump/pv.yaml` and `3scale-dump/pv/describe.txt`
 - Objects: `3scale-dump/pv/[object].yaml` and `3scale-dump/pv/describe/[object].txt`
 
-#### PVCs (Persistent Volume Claims)
+#### PVCs - Persistent Volume Claims
 
 - Single: `3scale-dump/pvc.yaml` and `3scale-dump/pvc/describe.txt`
 - Objects: `3scale-dump/pvc/[object].yaml` and `3scale-dump/pvc/describe/[object].txt`
@@ -93,15 +120,15 @@ With the exception of the `Pods and Events Information`, OpenShift related confi
 - Single `3scale-dump/serviceaccounts.yaml`
 - Objects: `3scale-dump/serviceaccounts/[object].yaml`
 
-#### Node (CPU and Memory Consumption and Limits)
+#### Node - CPU and Memory Consumption and Limits
 
 - File: `/status/node.txt`
 
-## 3scale configuration
+## 3scale Configuration
 
 The directories `apicast-staging` and `apicast-production` are created inside `/status` and should contain information related to both pods (if running). There is also some additional debug (stderr) information from the retrieval process.
 
-#### 3scale Echo API call (from the APIcast pod)
+#### 3scale Echo API call - from the APIcast pod
 
 - Files: `/status/apicast-[staging|production]/3scale-echo-api-[staging|production].txt` 
 
@@ -123,7 +150,7 @@ Depends on the value from the variable `APICAST_MANAGEMENT_API` on both the Stag
 
 - Files: `/status/apicast-[staging|production]/certificate.txt` and `/status/apicast-[staging|production]/certificate-showcerts.txt`
 
-#### Project and Pods 'runAsUser'
+#### Project and Pods - runAsUser
 
 - Files: `/status/project.txt` and `/status/pods-run-as-user.txt`
 
@@ -133,7 +160,7 @@ Depends on the value from the variable `APICAST_MANAGEMENT_API` on both the Stag
 
 - File: `/status/sidekiq.txt`
 
-## Known Issues
+# Known Issues
 
 - On `2.6 On-premises`, the `apicast-wildcard-router` pod doesn't exist anymore. This is the single pod that contains the `openssl` utility to validate both the APIcast Staging and Production certificates. This process neeeds to be executed from inside a pod, since the OpenShift Node already adds any self-generated certificate as a valid Certificate Authority (CA).
 
