@@ -166,3 +166,5 @@ Depends on the value from the variable `APICAST_MANAGEMENT_API` on both the Stag
 
 - The script is not tested or validated against OpenShift Container Platform (OCP) 4.X, only 3.11. However, it's still not being widely used.
 
+- Several items raised on the JIRA **THREESCALE-2588** will need to be addressed in a future stable release.
+
