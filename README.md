@@ -35,6 +35,8 @@ This project is not yet officially supported or endorsed by Red Hat.
 
 # Usage
 
+Stable version in: https://raw.githubusercontent.com/estevaobk/3scaledump/1.0-stable/3scale-dump.sh
+
 After downloading the script, make it executable:
 ```
 $ chmod +x 3scale-dump.sh
