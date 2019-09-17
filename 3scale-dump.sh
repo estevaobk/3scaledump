@@ -282,6 +282,8 @@ oc get pod -o wide | grep -iv "deploy" > ${DUMP_DIR}/status/pods.txt 2>&1
 
 oc get event > ${DUMP_DIR}/status/events.txt 2>&1
 
+oc version > ${DUMP_DIR}/status/ocp-version.txt 2>&1
+
 ((STEP++))
 
 
