@@ -35,6 +35,10 @@ This project is not yet officially supported or endorsed by Red Hat.
 
 # Usage
 
+After downloading the script, make it executable:
+```
+$ chmod +x 3scale-dump.sh
+```
 ```
 $ ./3scale-dump.sh <3scale Project> [Compress Format] 2>&1 | tee 3scale-dump-logs.txt
 
