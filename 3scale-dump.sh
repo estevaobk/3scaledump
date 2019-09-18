@@ -253,7 +253,7 @@ fi
 
 
 echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
-read TEMP
+read TEMP </dev/tty
 
 
 # Create the Dump Directory if it does not exist #
@@ -281,6 +281,8 @@ oc get pod -o wide > ${DUMP_DIR}/status/pods-all.txt 2>&1
 oc get pod -o wide | grep -iv "deploy" > ${DUMP_DIR}/status/pods.txt 2>&1
 
 oc get event > ${DUMP_DIR}/status/events.txt 2>&1
+
+oc version > ${DUMP_DIR}/status/ocp-version.txt 2>&1
 
 ((STEP++))
 
