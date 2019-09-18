@@ -253,7 +253,7 @@ fi
 
 
 echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
-read TEMP
+read TEMP < /dev/tty
 
 
 # Create the Dump Directory if it does not exist #
