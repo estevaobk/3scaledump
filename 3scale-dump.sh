@@ -104,7 +104,7 @@ read_obj() {
             if [[ ${COMPRESS} == 1 ]]; then
                 ${COMMAND} ${OBJ} ${YAML} 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}.${COMPRESS_FORMAT}
 
-                sleep 1.0
+                sleep 1.5
 
             else
                 ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
