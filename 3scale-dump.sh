@@ -178,6 +178,8 @@ cleanup_dir() {
         RMDIR=$(rmdir -v ${TARGET_DIR} 2>&1)
 
         echo -e "\n\t${RMDIR}\n"
+
+        sleep 0.25
     fi
 
     unset TARGET_DIR COMPRESS
@@ -453,6 +455,9 @@ while read PV; do
 
     echo -e "${DESCRIBE}" > ${DUMP_DIR}/pv/describe/${PV}.txt
     echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pv/describe.txt
+
+    sleep 0.5
+
 done < ${DUMP_DIR}/temp.txt
 
 ((STEP++))
@@ -486,6 +491,9 @@ while read PVC; do
 
     echo -e "${DESCRIBE}" > ${DUMP_DIR}/pvc/describe/${PVC}.txt
     echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pvc/describe.txt
+
+    sleep 0.5
+
 done < ${DUMP_DIR}/temp.txt
 
 ((STEP++))
@@ -524,6 +532,8 @@ if [[ -n ${APICAST_POD_STG} ]]; then
     MGMT_API_STG=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'APICAST_MANAGEMENT_API=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
     APICAST_ROUTE_STG=$(oc get route | grep -i "apicast-staging" | grep -v NAME | head -n 1 | awk '{print $2}')
     THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_STG} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
+
+    sleep 0.5
 fi
 
 
@@ -536,6 +546,8 @@ if [[ -n ${APICAST_POD_PRD} ]]; then
     if [[ -z ${THREESCALE_PORTAL_ENDPOINT} ]]; then
         THREESCALE_PORTAL_ENDPOINT=$(oc rsh ${APICAST_POD_PRD} /bin/bash -c "env | grep 'THREESCALE_PORTAL_ENDPOINT=' | head -n 1 | cut -d '=' -f 2" < /dev/null)
     fi
+
+    sleep 0.5
 fi
 
 
@@ -562,10 +574,14 @@ echo -e "\n${STEP}. Status: 3scale Echo API"
 
 if [[ -n ${APICAST_POD_STG} ]]; then
     timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-staging/3scale-echo-api-staging.txt 2>&1 < /dev/null
+
+    sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]]; then
     timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-production/3scale-echo-api-production.txt 2>&1 < /dev/null
+
+    sleep 0.5
 fi
 
 ((STEP++))
@@ -578,13 +594,21 @@ echo -e "\n${STEP}. Status: Staging/Production Backend JSON"
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
     timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
 
+    sleep 0.5
+
     timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-production-json-debug.txt < /dev/null
+
+    sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
     timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-production/apicast-staging-json-debug.txt < /dev/null
 
+    sleep 0.5
+
     timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
+
+    sleep 0.5
 fi
 
 ((STEP++))
@@ -600,6 +624,8 @@ if [[ -n ${APICAST_POD_STG} ]]; then
     MGMT_API="${MGMT_API_STG}"
 
     mgmt_api
+
+    sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]]; then
@@ -608,6 +634,8 @@ if [[ -n ${APICAST_POD_PRD} ]]; then
     MGMT_API="${MGMT_API_PRD}"
 
     mgmt_api
+
+    sleep 0.5
 fi
 
 ((STEP++))
@@ -619,12 +647,22 @@ echo -e "\n${STEP}. Status: APIcast Certificates"
 
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${WILDCARD_POD} ]]; then
     timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate.txt 2>&1 < /dev/null
+
+    sleep 0.5
+
     timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -showcerts -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate-showcerts.txt 2>&1 < /dev/null
+
+    sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]] && [[ -n ${WILDCARD_POD} ]]; then
     timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_PRD} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_PRD} -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate.txt 2>&1 < /dev/null
+
+    sleep 0.5
+
     timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_PRD} #\n' ; echo | openssl s_client -showcerts -servername ${APICAST_ROUTE_PRD} -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate-showcerts.txt 2>&1 < /dev/null
+
+    sleep 0.5
 fi
 
 ((STEP++))
@@ -632,7 +670,7 @@ fi
 
 # Status: Project and Pods 'runAsUser' (Database RW issues) #
 
-echo -e "\n${STEP}. Status: Status: Project and Pods 'runAsUser'"
+echo -e "\n${STEP}. Status: Project and Pods 'runAsUser'"
 
 oc get project ${THREESCALE_PROJECT} -o yaml > ${DUMP_DIR}/status/project.txt 2>&1
 
@@ -643,6 +681,8 @@ while read POD; do
 
     echo -e "Pod: ${POD} | RunAsUser: ${RUNASUSER}\n" >> ${DUMP_DIR}/status/pods-run-as-user.txt 2>&1
 
+    sleep 0.5
+
 done < ${DUMP_DIR}/temp.txt
 
 ((STEP++))
@@ -650,10 +690,12 @@ done < ${DUMP_DIR}/temp.txt
 
 # Status: Sidekiq Queue #
 
-echo -e "\n${STEP}. Status: Status: Sidekiq Queue (might take up to 3 minutes)"
+echo -e "\n${STEP}. Status: Sidekiq Queue (might take up to 3 minutes)"
 
 if [[ -n ${SYSTEM_APP_POD} ]]; then
     timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo 'stats = Sidekiq::Stats.new' | bundle exec rails console" > ${DUMP_DIR}/status/sidekiq.txt 2>&1 < /dev/null
+
+    sleep 0.5
 fi
 
 ((STEP++))
