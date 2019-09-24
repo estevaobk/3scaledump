@@ -9,7 +9,9 @@ CURRENT_DIR=$(dirname "$0")
 # Avoid fetching information about any pod that is not a 3scale one
 THREEESCALE_PODS=("apicast-production" "apicast-staging" "apicast-wildcard-router" "backend-cron" "backend-listener" "backend-redis" "backend-worker" "system-app" "system-memcache" "system-mysql" "system-redis" "system-resque" "system-sidekiq" "system-sphinx" "zync" "zync-database")
 
-DUMP_FILE="${CURRENT_DIR}/3scale-dump.tar"
+NOW=$(date +"%Y-%m-%d_%H-%M" -u)
+
+DUMP_FILE="${CURRENT_DIR}/3scale-dump-${NOW}.tar"
 
 DUMP_DIR="${CURRENT_DIR}/3scale-dump"
 
@@ -102,9 +104,13 @@ read_obj() {
             if [[ ${COMPRESS} == 1 ]]; then
                 ${COMMAND} ${OBJ} ${YAML} 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}.${COMPRESS_FORMAT}
 
+                sleep 1.0
+
             else
                 ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
                 ${COMMAND} ${OBJ} ${YAML} > ${DUMP_DIR}/${NEWDIR}/${OBJ}.yaml 2>&1
+
+                sleep 0.5
             fi
 
         fi
