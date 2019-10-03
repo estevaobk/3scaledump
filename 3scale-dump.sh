@@ -11,9 +11,9 @@ THREEESCALE_PODS=("apicast-production" "apicast-staging" "apicast-wildcard-route
 
 NOW=$(date +"%Y-%m-%d_%H-%M" -u)
 
-DUMP_FILE="${CURRENT_DIR}/3scale-dump-${NOW}.tar"
+DUMP_DIR="${CURRENT_DIR}/3scale-dump-${NOW}"
 
-DUMP_DIR="${CURRENT_DIR}/3scale-dump"
+DUMP_FILE="${DUMP_DIR}.tar"
 
 
 #############
@@ -288,7 +288,7 @@ oc get pod -o wide > ${DUMP_DIR}/status/pods-all.txt 2>&1
 
 oc get pod -o wide | grep -iv "deploy" > ${DUMP_DIR}/status/pods.txt 2>&1
 
-oc get pod -o wide | grep -i "Error\|CrashLoopBackOff" > ${DUMP_DIR}/status/pods-error.txt 2>&1
+oc get pod -o wide | grep -i "deploy" > ${DUMP_DIR}/status/pods-deploy.txt 2>&1
 
 oc get event > ${DUMP_DIR}/status/events.txt 2>&1
 
@@ -335,30 +335,6 @@ create_dir
 read_obj
 cleanup
 
-# Fetch the logs from the pods in the 'error' state (if any):
-
-ERROR_PODS=$(oc get pod -o wide | grep -i "Error\|CrashLoopBackOff" 2> /dev/null)
-
-if [[ -n ${ERROR_PODS} ]]; then
-
-    echo -e "\n${STEP}. Fetch: Logs (Pods in an 'Error' or 'CrashLoopBackOff' state)\n"
-
-    NEWDIR="logs/error"
-    SINGLE_FILE="logs-error.txt"
-    COMMAND="oc logs --timestamps=true --all-containers"
-
-    VALIDATE_PODS=1
-    SUBSTRING=1
-    COMPRESS=1
-    VERBOSE=1
-    NOYAML=1
-
-    cat ${DUMP_DIR}/status/pods-error.txt | awk '{print $1}' > ${DUMP_DIR}/temp.txt
-
-    create_dir
-    read_obj
-    cleanup
-fi
 
 # Build the shell script to uncompress all logs according to the util (gzip, xz) being used
 
@@ -371,16 +347,39 @@ fi
 
 chmod +x ${DUMP_DIR}/logs/uncompress-logs.sh
 
-if [[ -n ${ERROR_PODS} ]]; then
+
+# Fetch the logs from the pods in the 'deploy' state (if any):
+
+DEPLOY_PODS=$(oc get pod -o wide | grep -i "deploy" 2> /dev/null)
+
+if [[ -n ${DEPLOY_PODS} ]]; then
+
+    echo -e "\n${STEP}. Fetch: Logs (Pods in a 'deploy' state)\n"
+
+    NEWDIR="logs/deploy"
+    SINGLE_FILE="logs-deploy.txt"
+    COMMAND="oc logs --timestamps=true --all-containers"
+
+    VALIDATE_PODS=1
+    SUBSTRING=1
+    COMPRESS=1
+    VERBOSE=1
+    NOYAML=1
+
+    cat ${DUMP_DIR}/status/pods-deploy.txt | awk '{print $1}' > ${DUMP_DIR}/temp.txt
+
+    create_dir
+    read_obj
+    cleanup
 
     if [[ ${COMPRESS_UTIL} == "xz" ]]; then
-        echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/error/uncompress-logs.sh
+        echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
 
     else
-        echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/error/uncompress-logs.sh
+        echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
     fi
 
-    chmod +x ${DUMP_DIR}/logs/error/uncompress-logs.sh
+    chmod +x ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
 fi
 
 ((STEP++))
@@ -786,11 +785,11 @@ else
     TARGET_DIR="dc"
     cleanup_dir
 
-    if [[ -n ${ERROR_PODS} ]]; then
-        REMOVE=$(/bin/rm -fv ${DUMP_DIR}/logs/error/uncompress-logs.sh 2>&1)
+    if [[ -n ${DEPLOY_PODS} ]]; then
+        REMOVE=$(/bin/rm -fv ${DUMP_DIR}/logs/deploy/uncompress-logs.sh 2>&1)
         echo -e "\t\t${REMOVE}"
 
-        TARGET_DIR="logs/error"
+        TARGET_DIR="logs/deploy"
         COMPRESS=1
         cleanup_dir
     fi
