@@ -102,9 +102,14 @@ read_obj() {
             fi
 
             if [[ ${COMPRESS} == 1 ]]; then
-                ${COMMAND} ${OBJ} ${YAML} 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}.${COMPRESS_FORMAT}
+                CONTAINERS=$(${COMMAND} ${OBJ} --template='{{range .spec.containers}}{{.name}}
+{{end}}')
 
-                sleep 1.5
+                for CONTAINER in ${CONTAINERS}; do
+                    oc logs ${OBJ} --container=${CONTAINER} --timestamps 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+                done
+
+                sleep 1.0
 
             else
                 ${COMMAND} ${OBJ} ${YAML} >> ${DUMP_DIR}/${SINGLE_FILE} 2>&1
@@ -321,7 +326,7 @@ echo -e "\n${STEP}. Fetch: Logs\n"
 
 NEWDIR="logs"
 SINGLE_FILE="logs.txt"
-COMMAND="oc logs --timestamps=true --all-containers"
+COMMAND="oc get pod"
 
 VALIDATE_PODS=1
 SUBSTRING=1
@@ -358,7 +363,7 @@ if [[ -n ${DEPLOY_PODS} ]]; then
 
     NEWDIR="logs/deploy"
     SINGLE_FILE="logs-deploy.txt"
-    COMMAND="oc logs --timestamps=true --all-containers"
+    COMMAND="oc get pod"
 
     VALIDATE_PODS=1
     SUBSTRING=1
