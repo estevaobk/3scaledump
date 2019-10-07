@@ -7,7 +7,7 @@ COMPRESS_UTIL="${2,,}"
 CURRENT_DIR=$(dirname "$0")
 
 # Avoid fetching information about any pod that is not a 3scale one
-THREEESCALE_PODS=("apicast-production" "apicast-staging" "apicast-wildcard-router" "backend-cron" "backend-listener" "backend-redis" "backend-worker" "system-app" "system-memcache" "system-mysql" "system-redis" "system-resque" "system-sidekiq" "system-sphinx" "zync" "zync-database")
+THREEESCALE_PODS=("apicast-production" "apicast-staging" "apicast-wildcard-router" "backend-cron" "backend-listener" "backend-redis" "backend-worker" "system-app" "system-memcache" "system-mysql" "system-redis" "system-resque" "system-sidekiq" "system-sphinx" "zync" "zync-que" "zync-database")
 
 NOW=$(date +"%Y-%m-%d_%H-%M" -u)
 
