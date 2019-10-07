@@ -68,7 +68,22 @@ execute_command() {
         print_error
 
     else
-        ${COMMAND} | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
+        ${COMMAND} 2> ${DUMP_DIR}/temp-cmd.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
+    fi
+}
+
+detect_error() {
+    if [[ -f ${DUMP_DIR}/temp-cmd.txt ]]; then
+        TEMP_CMD=$(< ${DUMP_DIR}/temp-cmd.txt)
+        
+        if [[ -n ${TEMP_CMD} ]]; then
+            echo -e "\nError on the Step ${STEP} (${STEP_DESC}):\n" >> ${DUMP_DIR}/errors.txt
+            cat ${DUMP_DIR}/temp-cmd.txt >> ${DUMP_DIR}/errors.txt
+        fi
+
+        /bin/rm -f ${DUMP_DIR}/temp-cmd.txt
+
+        unset TEMP_CMD
     fi
 }
 
@@ -206,6 +221,10 @@ display_verbose() {
     unset TAB
 }
 
+print_step() {
+    echo -e "\n${STEP}. ${STEP_DESC}\n"
+}
+
 
 ########
 # MAIN #
@@ -239,6 +258,7 @@ fi
 # Validate Argument: Compress Util #
 
 # Attempt to auto-detect the COMPRESS_UTIL if not specified
+
 if [[ -z ${COMPRESS_UTIL} ]] || [[ "${COMPRESS_UTIL}" == "auto" ]] || [[ ${COMPRESS_UTIL} == "xz" ]]; then
     XZ_COMMAND=$(command -v xz 2>&1)
 
@@ -287,7 +307,8 @@ STEP=1
 
 # Fetch the status from all the pods and events #
 
-echo -e "\n${STEP}. Fetch: All pods and Events\n"
+STEP_DESC="Fetch: All pods and Events"
+print_step
 
 oc get pod -o wide > ${DUMP_DIR}/status/pods-all.txt 2>&1
 
@@ -304,7 +325,8 @@ oc version > ${DUMP_DIR}/status/ocp-version.txt 2>&1
 
 # DeploymentConfig objects #
 
-echo -e "\n${STEP}. Fetch: DeploymentConfig\n"
+STEP_DESC="Fetch: DeploymentConfig"
+print_step
 
 NEWDIR="dc"
 SINGLE_FILE="dc.yaml"
@@ -322,7 +344,8 @@ cleanup
 
 # Fetch and compress the logs #
 
-echo -e "\n${STEP}. Fetch: Logs\n"
+STEP_DESC="Fetch: Logs"
+print_step
 
 NEWDIR="logs"
 SINGLE_FILE="logs.txt"
@@ -359,7 +382,8 @@ DEPLOY_PODS=$(oc get pod -o wide | grep -i "deploy" 2> /dev/null)
 
 if [[ -n ${DEPLOY_PODS} ]]; then
 
-    echo -e "\n${STEP}. Fetch: Logs (Pods in a 'deploy' state)\n"
+    STEP_DESC="Fetch: Logs (Pods in a 'deploy' state)"
+    print_step
 
     NEWDIR="logs/deploy"
     SINGLE_FILE="logs-deploy.txt"
@@ -392,7 +416,8 @@ fi
 
 # Secrets #
 
-echo -e "\n${STEP}. Fetch: Secrets\n"
+STEP_DESC="Fetch: Secrets"
+print_step
 
 NEWDIR="secrets"
 SINGLE_FILE="secrets.yaml"
@@ -408,7 +433,8 @@ cleanup
 
 # Routes #
 
-echo -e "\n${STEP}. Fetch: Routes\n"
+STEP_DESC="Fetch: Routes"
+print_step
 
 NEWDIR="routes"
 SINGLE_FILE="routes.yaml"
@@ -424,7 +450,8 @@ cleanup
 
 # Services #
 
-echo -e "\n${STEP}. Fetch: Services\n"
+STEP_DESC="Fetch: Services"
+print_step
 
 NEWDIR="services"
 SINGLE_FILE="services.yaml"
@@ -440,7 +467,8 @@ cleanup
 
 # Image Streams #
 
-echo -e "\n${STEP}. Fetch: Image Streams\n"
+STEP_DESC="Fetch: Image Streams"
+print_step
 
 NEWDIR="images"
 SINGLE_FILE="images.yaml"
@@ -456,7 +484,8 @@ cleanup
 
 # ConfigMaps #
 
-echo -e "\n${STEP}. Fetch: ConfigMaps\n"
+STEP_DESC="Fetch: ConfigMaps"
+print_step
 
 NEWDIR="configmaps"
 SINGLE_FILE="configmaps.yaml"
@@ -472,13 +501,15 @@ cleanup
 
 # PV #
 
-echo -e "\n${STEP}. Fetch: PV\n"
+STEP_DESC="Fetch: PV"
+print_step
 
 NEWDIR="pv"
 SINGLE_FILE="pv.yaml"
 COMMAND="oc get pv"
 
-${COMMAND} > ${DUMP_DIR}/status/pv.txt 2>&1
+${COMMAND} > ${DUMP_DIR}/status/pv.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
 
 create_dir
 execute_command
@@ -494,7 +525,8 @@ execute_command
 cleanup
 
 while read PV; do
-    DESCRIBE=$(oc describe pv ${PV} 2>&1)
+    DESCRIBE=$(oc describe pv ${PV} 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
 
     echo -e "${DESCRIBE}" > ${DUMP_DIR}/pv/describe/${PV}.txt
     echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pv/describe.txt
@@ -508,13 +540,15 @@ done < ${DUMP_DIR}/temp.txt
 
 # PVC #
 
-echo -e "\n${STEP}. Fetch: PVC\n"
+STEP_DESC="Fetch: PVC"
+print_step
 
 NEWDIR="pvc"
 SINGLE_FILE="pvc.yaml"
 COMMAND="oc get pvc"
 
-${COMMAND} > ${DUMP_DIR}/status/pvc.txt 2>&1
+${COMMAND} > ${DUMP_DIR}/status/pvc.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
 
 create_dir
 execute_command
@@ -530,7 +564,8 @@ execute_command
 cleanup
 
 while read PVC; do
-    DESCRIBE=$(oc describe pvc ${PVC} 2>&1)
+    DESCRIBE=$(oc describe pvc ${PVC} 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
 
     echo -e "${DESCRIBE}" > ${DUMP_DIR}/pvc/describe/${PVC}.txt
     echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pvc/describe.txt
@@ -544,7 +579,8 @@ done < ${DUMP_DIR}/temp.txt
 
 # ServiceAccounts #
 
-echo -e "\n${STEP}. Fetch: ServiceAccounts\n"
+STEP_DESC="Fetch: ServiceAccounts"
+print_step
 
 NEWDIR="serviceaccounts"
 SINGLE_FILE="serviceaccounts.yaml"
@@ -558,11 +594,44 @@ cleanup
 ((STEP++))
 
 
-# Status: Node #
+# Status: Nodes #
 
-echo -e "\n${STEP}. Status: Node"
+STEP_DESC="Status: Nodes"
+print_step
 
-oc describe node > ${DUMP_DIR}/status/node.txt 2>&1
+# YAML format
+
+NEWDIR="status/nodes"
+SINGLE_FILE="status/nodes.yaml"
+COMMAND="oc get nodes -o wide"
+
+create_dir
+execute_command
+read_obj
+cleanup
+
+# TXT (describe) format
+
+COMMAND="oc get nodes -o wide"
+execute_command
+
+${COMMAND} > ${DUMP_DIR}/status/nodes.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+while read NODE; do
+    DESCRIBE=$(oc describe node ${NODE} 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
+
+    echo -e "${DESCRIBE}" > ${DUMP_DIR}/status/nodes/${NODE}.txt
+    echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/status/nodes-describe.txt
+
+    sleep 0.5
+
+done < ${DUMP_DIR}/temp.txt
+
+# The code below doesn't have any 'detect_error' on purpuse to print the final message if needed
+oc describe node > ${DUMP_DIR}/status/nodes/current.txt 2>&1
+FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
 
 ((STEP++))
 
@@ -598,7 +667,8 @@ WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -i "running
 
 SYSTEM_APP_POD=$(oc get pod | grep -i "system-app" | grep -i "running" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
 
-echo -e "\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n\tSYSTEM_APP_POD: ${SYSTEM_APP_POD}"
+echo -e "\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n\tSYSTEM_APP_POD: ${SYSTEM_APP_POD}" | tee ${DUMP_DIR}/status/3scale-variables.txt
+
 sleep 3
 
 
@@ -613,7 +683,8 @@ chmod +x ${DUMP_DIR}/status/apicast-production/python-json.sh
 
 # Status: 3scale Echo API #
 
-echo -e "\n${STEP}. Status: 3scale Echo API"
+STEP_DESC="Status: 3scale Echo API"
+print_step
 
 if [[ -n ${APICAST_POD_STG} ]]; then
     timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-staging/3scale-echo-api-staging.txt 2>&1 < /dev/null
@@ -632,7 +703,8 @@ fi
 
 # Status: Staging/Production Backend JSON #
 
-echo -e "\n${STEP}. Status: Staging/Production Backend JSON"
+STEP_DESC="Status: Staging/Production Backend JSON"
+print_step
 
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
     timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
@@ -659,7 +731,8 @@ fi
 
 # Status: Management API #
 
-echo -e "\n${STEP}. Status: Management API"
+STEP_DESC="Status: Management API"
+print_step
 
 if [[ -n ${APICAST_POD_STG} ]]; then
     OUTPUT="${DUMP_DIR}/status/apicast-staging/mgmt-api"
@@ -686,7 +759,8 @@ fi
 
 # APIcast Status: APIcast Certificates #
 
-echo -e "\n${STEP}. Status: APIcast Certificates"
+STEP_DESC="Status: APIcast Certificates"
+print_step
 
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${WILDCARD_POD} ]]; then
     timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate.txt 2>&1 < /dev/null
@@ -713,7 +787,8 @@ fi
 
 # Status: Project and Pods 'runAsUser' (Database RW issues) #
 
-echo -e "\n${STEP}. Status: Project and Pods 'runAsUser'"
+STEP_DESC="Status: Project and Pods 'runAsUser'"
+print_step
 
 oc get project ${THREESCALE_PROJECT} -o yaml > ${DUMP_DIR}/status/project.txt 2>&1
 
@@ -733,7 +808,8 @@ done < ${DUMP_DIR}/temp.txt
 
 # Status: Sidekiq Queue #
 
-echo -e "\n${STEP}. Status: Sidekiq Queue (might take up to 3 minutes)"
+STEP_DESC="Status: Sidekiq Queue (might take up to 3 minutes)"
+print_step
 
 if [[ -n ${SYSTEM_APP_POD} ]]; then
     timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo 'stats = Sidekiq::Stats.new' | bundle exec rails console" > ${DUMP_DIR}/status/sidekiq.txt 2>&1 < /dev/null
@@ -782,6 +858,9 @@ else
     echo -e "\t\t${REMOVE}"   
 
     TARGET_DIR="status/apicast-production"
+    cleanup_dir
+
+    TARGET_DIR="status/nodes"
     cleanup_dir
 
     TARGET_DIR="status"
@@ -843,6 +922,10 @@ else
 
     if [[ -d ${DUMP_DIR} ]]; then
         echo -e "\nPlease remove manually the temporary directory: ${DUMP_DIR}\n"
+    fi
+
+    if [[ -n ${FORBIDDEN} ]]; then
+        echo -e "\n####### NOTICE #######\n\nSome cluster related information was not possible to be retrieved during the dump process. Please refer to the section 'Administrator (Recommended)' from the Knowledge Base Article for more information. In case it's not possible to perform the dump with an elevated level of privilege, the information contained could be already sufficient to troubleshoot the issue regardless of this limitation. Hence, please go ahead and attach it on the Case.\n\n######################\n"
     fi
     
     exit 0
