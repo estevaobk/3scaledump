@@ -69,6 +69,8 @@ execute_command() {
 
     else
         ${COMMAND} 2> ${DUMP_DIR}/temp-cmd.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
+
+        detect_error
     fi
 }
 
@@ -77,8 +79,9 @@ detect_error() {
         TEMP_CMD=$(< ${DUMP_DIR}/temp-cmd.txt)
         
         if [[ -n ${TEMP_CMD} ]]; then
-            echo -e "\nError on the Step ${STEP} (${STEP_DESC}):\n" >> ${DUMP_DIR}/errors.txt
+            echo -e "Error on the Step ${STEP} (${STEP_DESC}):\n" >> ${DUMP_DIR}/errors.txt
             cat ${DUMP_DIR}/temp-cmd.txt >> ${DUMP_DIR}/errors.txt
+            echo -e "\n" >> ${DUMP_DIR}/errors.txt
         fi
 
         /bin/rm -f ${DUMP_DIR}/temp-cmd.txt
@@ -636,6 +639,19 @@ FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
 ((STEP++))
 
 
+# Status: Project Quotas #
+
+STEP_DESC="Status: Quotas"
+print_step
+
+${COMMAND} > ${DUMP_DIR}/status/nodes.txt 2> ${DUMP_DIR}/temp-cmd.txt
+
+oc get quota -o yaml > ${DUMP_DIR}/status/quotas.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+((STEP++))
+
+
 # Variables used on the next steps #
 
 APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | grep -i "running" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
@@ -806,15 +822,15 @@ done < ${DUMP_DIR}/temp.txt
 ((STEP++))
 
 
-# Status: Sidekiq Queue #
+# Status: Rails Console Queries #
 
-STEP_DESC="Status: Sidekiq Queue (might take up to 3 minutes)"
+STEP_DESC="Status: Rails Console Queries (might take up to 3 minutes)"
 print_step
 
 if [[ -n ${SYSTEM_APP_POD} ]]; then
-    timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo 'stats = Sidekiq::Stats.new' | bundle exec rails console" > ${DUMP_DIR}/status/sidekiq.txt 2>&1 < /dev/null
+    timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo -e 'y Sidekiq::Stats.new\ny AccessToken.all' | bundle exec rails console" > ${DUMP_DIR}/status/rails.txt 2>&1 < /dev/null
 
-    sleep 0.5
+    sleep 1.5
 fi
 
 ((STEP++))
