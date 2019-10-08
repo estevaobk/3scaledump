@@ -644,8 +644,6 @@ FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
 STEP_DESC="Status: Quotas"
 print_step
 
-${COMMAND} > ${DUMP_DIR}/status/nodes.txt 2> ${DUMP_DIR}/temp-cmd.txt
-
 oc get quota -o yaml > ${DUMP_DIR}/status/quotas.yaml 2> ${DUMP_DIR}/temp-cmd.txt
 detect_error
 
