@@ -124,7 +124,12 @@ read_obj() {
 {{end}}')
 
                 for CONTAINER in ${CONTAINERS}; do
-                    oc logs ${OBJ} --container=${CONTAINER} --timestamps 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+
+                    if [[ ${PREVIOUS} == 1 ]]; then
+                        oc logs -p ${OBJ} --container=${CONTAINER} --timestamps 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+                    else
+                        oc logs ${OBJ} --container=${CONTAINER} --timestamps 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+                    fi
                 done
 
                 sleep 1.0
@@ -170,7 +175,7 @@ mgmt_api() {
 }
 
 cleanup() {
-    unset COMMAND COMPRESS NEWDIR NOYAML SINGLE_FILE SUBSTRING VALIDATE_PODS VERBOSE
+    unset COMMAND COMPRESS NEWDIR NOYAML PREVIOUS SINGLE_FILE SUBSTRING VALIDATE_PODS VERBOSE
 }
 
 cleanup_dir() {
@@ -366,17 +371,42 @@ create_dir
 read_obj
 cleanup
 
+echo -e "\n\n\t# Logs from previous pods (if any) #\n"
+
+# Previous logs #
+
+NEWDIR="logs/previous"
+SINGLE_FILE="logs-previous.txt"
+COMMAND="oc get pod"
+
+VALIDATE_PODS=1
+SUBSTRING=1
+COMPRESS=1
+VERBOSE=1
+NOYAML=1
+PREVIOUS=1
+
+cat ${DUMP_DIR}/status/pods.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
+
+create_dir
+read_obj
+cleanup
+
 
 # Build the shell script to uncompress all logs according to the util (gzip, xz) being used
 
 if [[ ${COMPRESS_UTIL} == "xz" ]]; then
     echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+    echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/previous/uncompress-logs.sh
 
 else
     echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+    echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/previous/uncompress-logs.sh
 fi
 
 chmod +x ${DUMP_DIR}/logs/uncompress-logs.sh
+
+chmod +x ${DUMP_DIR}/logs/previous/uncompress-logs.sh
 
 
 # Fetch the logs from the pods in the 'deploy' state (if any):
@@ -933,6 +963,13 @@ else
     cleanup_dir
 
     TARGET_DIR="dc"
+    cleanup_dir
+
+    REMOVE=$(/bin/rm -fv ${DUMP_DIR}/logs/previous/uncompress-logs.sh 2>&1)
+    echo -e "\t\t${REMOVE}"
+
+    TARGET_DIR="logs/previous"
+    COMPRESS=1
     cleanup_dir
 
     if [[ -n ${DEPLOY_PODS} ]]; then
