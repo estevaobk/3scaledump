@@ -647,7 +647,57 @@ print_step
 oc get quota -o yaml > ${DUMP_DIR}/status/quotas.yaml 2> ${DUMP_DIR}/temp-cmd.txt
 detect_error
 
+oc describe quota > ${DUMP_DIR}/status/quotas.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
 ((STEP++))
+
+
+# Status: Limits #
+
+STEP_DESC="Status: Limits"
+print_step
+
+cat ${DUMP_DIR}/status/pods-all.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
+
+LIMITS_DESCRIBE_FILE="${DUMP_DIR}/temp-describe.txt"
+LIMITS_FILE="${DUMP_DIR}/limits-temp.txt"
+
+while read POD; do
+
+    echo -e "\n\tProcess: ${POD}"
+
+    oc describe pod "${POD}" > ${LIMITS_DESCRIBE_FILE}
+
+    while read LINE; do
+
+        if [[ "${LINE,,}" == *"container id:"* ]] && [[ ! "${PREVIOUS_LINE,,}" == *"-svc:"* ]]; then
+            PREVIOUS_LINE=$(echo "${PREVIOUS_LINE}" | sed "s@:@@g")
+
+            echo -e "\n\n# Pod: ${POD} | Container: ${PREVIOUS_LINE} #\n" >> ${LIMITS_FILE}
+
+        elif [[ "${LINE,,}" == *"limits"* ]]; then
+            echo -e "${LINE}" >> ${LIMITS_FILE}
+
+        elif [[ "${LINE,,}" == *"requests:"* ]]; then
+            echo -e "\n${LINE}" >> ${LIMITS_FILE}
+
+        elif [[ "${LINE,,}" == *"cpu:"* ]] || [[ "${LINE,,}" == *"memory:"* ]]; then
+            echo -e "  ${LINE}" >> ${LIMITS_FILE}
+
+        fi
+
+        PREVIOUS_LINE="${LINE}"
+
+    done < ${LIMITS_DESCRIBE_FILE}
+
+    sleep 1.0
+
+done < ${DUMP_DIR}/temp.txt
+
+cat ${LIMITS_FILE} | tail -n +3 > ${DUMP_DIR}/status/limits.txt
+
+/bin/rm -f ${LIMITS_DESCRIBE_FILE} ${LIMITS_FILE}
 
 
 # Variables used on the next steps #
@@ -681,7 +731,7 @@ WILDCARD_POD=$(oc get pod | grep -i "apicast-wildcard-router" | grep -i "running
 
 SYSTEM_APP_POD=$(oc get pod | grep -i "system-app" | grep -i "running" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
 
-echo -e "\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n\tSYSTEM_APP_POD: ${SYSTEM_APP_POD}" | tee ${DUMP_DIR}/status/3scale-variables.txt
+echo -e "\n# Variables used in the next following steps #\n\n\tAPICAST_POD_PRD: ${APICAST_POD_PRD}\n\tAPICAST_POD_STG: ${APICAST_POD_STG}\n\tMGMT_API_PRD: ${MGMT_API_PRD}\n\tMGMT_API_STG: ${MGMT_API_STG}\n\tAPICAST_ROUTE_PRD: ${APICAST_ROUTE_PRD}\n\tAPICAST_ROUTE_STG: ${APICAST_ROUTE_STG}\n\tWILDCARD POD: ${WILDCARD_POD}\n\tTHREESCALE_PORTAL_ENDPOINT: ${THREESCALE_PORTAL_ENDPOINT}\n\tSYSTEM_APP_POD: ${SYSTEM_APP_POD}" | tee ${DUMP_DIR}/status/3scale-variables.txt
 
 sleep 3
 
