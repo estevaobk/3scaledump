@@ -126,7 +126,7 @@ read_obj() {
                 for CONTAINER in ${CONTAINERS}; do
                     if [[ ${PREVIOUS} == 1 ]]; then
 
-                        oc logs -p ${OBJ} --container=${CONTAINER} --timestamps 2>&1 > ${DUMP_DIR}/${NEWDIR}/previous-temp.txt
+                        oc logs -p ${OBJ} --container=${CONTAINER} --timestamps > ${DUMP_DIR}/${NEWDIR}/previous-temp.txt 2>&1
 
                         VALIDATE=$(< ${DUMP_DIR}/${NEWDIR}/previous-temp.txt head -n 1)
 
