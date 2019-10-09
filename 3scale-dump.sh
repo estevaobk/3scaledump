@@ -931,6 +931,12 @@ fi
 
 /bin/rm -f ${DUMP_DIR}/temp.txt
 
+# Add the .txt log file if exists
+
+if [[ -f ${CURRENT_DIR}/3scale-dump-logs.txt ]]; then
+    /bin/cp -f ${CURRENT_DIR}/3scale-dump-logs.txt ${DUMP_DIR}/3scale-dump-logs.txt
+fi
+
 tar cpf ${DUMP_FILE} --xform s:'./':: ${DUMP_DIR}
 
 if [[ ! -f ${DUMP_FILE} ]]; then
