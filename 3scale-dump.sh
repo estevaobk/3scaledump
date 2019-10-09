@@ -124,9 +124,16 @@ read_obj() {
 {{end}}')
 
                 for CONTAINER in ${CONTAINERS}; do
-
                     if [[ ${PREVIOUS} == 1 ]]; then
-                        oc logs -p ${OBJ} --container=${CONTAINER} --timestamps 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+
+                        oc logs -p ${OBJ} --container=${CONTAINER} --timestamps 2>&1 > ${DUMP_DIR}/${NEWDIR}/previous-temp.txt
+
+                        VALIDATE=$(< ${DUMP_DIR}/${NEWDIR}/previous-temp.txt head -n 1)
+
+                        if [[ ! "${VALIDATE,,}" == *"previous terminated container"* ]] && [[ ! "${VALIDATE,,}" == *"not found"* ]]; then
+                            cat ${DUMP_DIR}/${NEWDIR}/previous-temp.txt | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+                        fi
+
                     else
                         oc logs ${OBJ} --container=${CONTAINER} --timestamps 2>&1 | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
                     fi
@@ -144,6 +151,10 @@ read_obj() {
         fi
 
     done < ${DUMP_DIR}/temp.txt
+
+    if [[ ${PREVIOUS} == 1 ]]; then
+        /bin/rm -f ${DUMP_DIR}/${NEWDIR}/previous-temp.txt
+    fi
             
     /bin/rm -f ${DUMP_DIR}/temp.txt
 }
@@ -373,6 +384,7 @@ cleanup
 
 echo -e "\n\n\t# Logs from previous pods (if any) #\n"
 
+
 # Previous logs #
 
 NEWDIR="logs/previous"
@@ -415,8 +427,7 @@ DEPLOY_PODS=$(oc get pod -o wide | grep -i "deploy" 2> /dev/null)
 
 if [[ -n ${DEPLOY_PODS} ]]; then
 
-    STEP_DESC="Fetch: Logs (Pods in a 'deploy' state)"
-    print_step
+    echo -e "\n\n\t# Logs from pods in a 'deploy' state #\n"
 
     NEWDIR="logs/deploy"
     SINGLE_FILE="logs-deploy.txt"
