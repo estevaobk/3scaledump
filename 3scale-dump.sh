@@ -699,6 +699,8 @@ cat ${LIMITS_FILE} | tail -n +3 > ${DUMP_DIR}/status/limits.txt
 
 /bin/rm -f ${LIMITS_DESCRIBE_FILE} ${LIMITS_FILE}
 
+((STEP++))
+
 
 # Variables used on the next steps #
 
