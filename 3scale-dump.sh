@@ -132,6 +132,9 @@ read_obj() {
 
                         if [[ ! "${VALIDATE,,}" == *"previous terminated container"* ]] && [[ ! "${VALIDATE,,}" == *"not found"* ]]; then
                             cat ${DUMP_DIR}/${NEWDIR}/previous-temp.txt | ${COMPRESS_UTIL} -f - > ${DUMP_DIR}/${NEWDIR}/${OBJ}-${CONTAINER}.${COMPRESS_FORMAT}
+
+                        else
+                            echo -e "\n${VALIDATE}" >> ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt
                         fi
 
                     else
@@ -154,6 +157,13 @@ read_obj() {
 
     if [[ ${PREVIOUS} == 1 ]]; then
         /bin/rm -f ${DUMP_DIR}/${NEWDIR}/previous-temp.txt
+
+        if [[ -f ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt ]]; then
+            echo -e "The following containers have been ignored as there were no previous logs:\n" > ${DUMP_DIR}/${NEWDIR}/ignored-containers.txt
+            cat ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt >> ${DUMP_DIR}/${NEWDIR}/ignored-containers.txt
+
+            /bin/rm -fv ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt
+        fi
     fi
             
     /bin/rm -f ${DUMP_DIR}/temp.txt
@@ -984,6 +994,11 @@ else
 
     REMOVE=$(/bin/rm -fv ${DUMP_DIR}/logs/previous/uncompress-logs.sh 2>&1)
     echo -e "\t\t${REMOVE}"
+
+    if [[ -f ${DUMP_DIR}/logs/previous/ignored-containers.txt ]]; then
+        REMOVE=$(/bin/rm -fv ${DUMP_DIR}/logs/previous/ignored-containers.txt 2>&1)
+        echo -e "\t\t${REMOVE}"
+    fi
 
     TARGET_DIR="logs/previous"
     COMPRESS=1
