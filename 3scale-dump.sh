@@ -162,7 +162,7 @@ read_obj() {
             echo -e "The following containers have been ignored as there were no previous logs:\n" > ${DUMP_DIR}/${NEWDIR}/ignored-containers.txt
             cat ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt >> ${DUMP_DIR}/${NEWDIR}/ignored-containers.txt
 
-            /bin/rm -fv ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt
+            /bin/rm -f ${DUMP_DIR}/${NEWDIR}/ignored-temp.txt
         fi
     fi
             
@@ -749,6 +749,29 @@ done < ${DUMP_DIR}/temp.txt
 cat ${LIMITS_FILE} | tail -n +3 > ${DUMP_DIR}/status/limits.txt
 
 /bin/rm -f ${LIMITS_DESCRIBE_FILE} ${LIMITS_FILE}
+
+((STEP++))
+
+
+# Status: OpenShift Project Debug #
+
+STEP_DESC="Status: OpenShift Project Debug"
+print_step
+
+echo -e "# Overall Status #\n" > ${DUMP_DIR}/status/openshift-status.txt
+
+oc status >> ${DUMP_DIR}/status/openshift-status.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n\n# Suggestions #\n" >> ${DUMP_DIR}/status/openshift-status.txt
+
+oc status --suggest >> ${DUMP_DIR}/status/openshift-status.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n\n# Dot Output #\n" >> ${DUMP_DIR}/status/openshift-status.txt
+
+oc status -o dot >> ${DUMP_DIR}/status/openshift-status.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
 
 ((STEP++))
 
