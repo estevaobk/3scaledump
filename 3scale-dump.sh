@@ -776,6 +776,94 @@ detect_error
 ((STEP++))
 
 
+# Status: Host Subnet #
+
+STEP_DESC="Status: Host Subnet"
+print_step
+
+oc get hostsubnet -o yaml > ${DUMP_DIR}/status/hostsubnet.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+oc get hostsubnet > ${DUMP_DIR}/status/hostsubnet.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n" >> ${DUMP_DIR}/status/hostsubnet.txt
+
+oc describe hostsubnet >> ${DUMP_DIR}/status/hostsubnet.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+((STEP++))
+
+
+# Status: SCC #
+
+STEP_DESC="Status: SCC"
+print_step
+
+oc get scc -o yaml > ${DUMP_DIR}/status/scc.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+oc get scc > ${DUMP_DIR}/status/scc.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n" >> ${DUMP_DIR}/status/scc.txt
+
+oc describe scc >> ${DUMP_DIR}/status/scc.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+((STEP++))
+
+
+# Status: (Cluster) Role Binding #
+
+STEP_DESC="Status: (Cluster) Role Binding"
+print_step
+
+oc get rolebinding -o yaml > ${DUMP_DIR}/status/rolebinding.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+oc get rolebinding > ${DUMP_DIR}/status/rolebinding.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n" >> ${DUMP_DIR}/status/rolebinding.txt
+
+oc describe rolebinding >> ${DUMP_DIR}/status/rolebinding.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+
+oc get clusterrolebinding -o yaml > ${DUMP_DIR}/status/rolebinding-cluster.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+oc get clusterrolebinding > ${DUMP_DIR}/status/rolebinding-cluster.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n" >> ${DUMP_DIR}/status/rolebinding-cluster.txt
+
+oc describe clusterrolebinding >> ${DUMP_DIR}/status/rolebinding-cluster.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+((STEP++))
+
+
+# Status: Storage Class #
+
+STEP_DESC="Status: Storage Class"
+print_step
+
+oc get storageclass -o yaml > ${DUMP_DIR}/status/storageclass.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+oc get storageclass -o wide > ${DUMP_DIR}/status/storageclass.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+echo -e "\n" >> ${DUMP_DIR}/status/scc.txt
+
+oc describe storageclass >> ${DUMP_DIR}/status/storageclass.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+((STEP++))
+
+
 # Variables used on the next steps #
 
 APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | grep -i "running" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
