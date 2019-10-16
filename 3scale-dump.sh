@@ -690,6 +690,43 @@ FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
 ((STEP++))
 
 
+# Status: Replication Controllers #
+
+STEP_DESC="Status: Replication Controllers"
+print_step
+
+# YAML format
+
+NEWDIR="status/replicationcontrollers"
+SINGLE_FILE="status/replicationcontrollers.yaml"
+COMMAND="oc get replicationcontrollers -o wide"
+
+create_dir
+execute_command
+read_obj
+cleanup
+
+# TXT (describe) format
+
+COMMAND="oc get replicationcontrollers -o wide"
+execute_command
+
+${COMMAND} > ${DUMP_DIR}/status/replicationcontrollers.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+while read RC; do
+    DESCRIBE=$(oc describe replicationcontroller ${RC} 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
+
+    echo -e "${DESCRIBE}" > ${DUMP_DIR}/status/replicationcontrollers/${RC}.txt
+
+    sleep 0.1
+
+done < ${DUMP_DIR}/temp.txt
+
+((STEP++))
+
+
 # Status: Project Quotas #
 
 STEP_DESC="Status: Quotas"
@@ -1095,6 +1132,9 @@ else
     cleanup_dir
 
     TARGET_DIR="status/nodes"
+    cleanup_dir
+
+    TARGET_DIR="status/replicationcontrollers"
     cleanup_dir
 
     TARGET_DIR="status"
