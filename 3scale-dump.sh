@@ -1087,7 +1087,7 @@ STEP_DESC="Status: Rails Console Queries (might take up to 3 minutes)"
 print_step
 
 if [[ -n ${SYSTEM_APP_POD} ]]; then
-    timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo -e 'y Sidekiq::Stats.new\ny AccessToken.all' | bundle exec rails console" > ${DUMP_DIR}/status/rails.txt 2>&1 < /dev/null
+    timeout 180 oc rsh -c system-master ${SYSTEM_APP_POD} /bin/bash -c "echo -e 'y Account.first.domain\ny Sidekiq::Stats.new\ny AccessToken.all' | bundle exec rails console" > ${DUMP_DIR}/status/rails.txt 2>&1 < /dev/null
 
     sleep 1.5
 fi
