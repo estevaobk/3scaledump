@@ -181,14 +181,14 @@ mgmt_api() {
     elif [[ ${MGMT_API,,} == "debug" ]] || [[ ${MGMT_API,,} == "status" ]]; then
         OUTPUT="${OUTPUT}-status"     
 
-        timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET http://localhost:8090/status/live" > ${OUTPUT}-live.txt 2>&1 < /dev/null
-        timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET http://localhost:8090/status/ready" > ${OUTPUT}-ready.txt 2>&1 < /dev/null
-        timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET http://localhost:8090/status/info" > ${OUTPUT}-info.txt 2>&1 < /dev/null
+        timeout 15 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET http://localhost:8090/status/live" > ${OUTPUT}-live.txt 2>&1 < /dev/null
+        timeout 15 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET http://localhost:8090/status/ready" > ${OUTPUT}-ready.txt 2>&1 < /dev/null
+        timeout 15 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET http://localhost:8090/status/info" > ${OUTPUT}-info.txt 2>&1 < /dev/null
 
         if [[ ${MGMT_API,,} == "debug" ]]; then
             OUTPUT="${OUTPUT}-debug"
 
-            timeout 10 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' http://localhost:8090/config" > ${OUTPUT}.json 2> ${OUTPUT}-stderr.txt < /dev/null
+            timeout 15 oc rsh ${APICAST_POD} /bin/bash -c "curl -X GET -H 'Accept: application/json' http://localhost:8090/config" > ${OUTPUT}.json 2> ${OUTPUT}-stderr.txt < /dev/null
         fi
 
         unset OUTPUT APICAST_POD MGMT_API        
@@ -952,13 +952,13 @@ STEP_DESC="Status: 3scale Echo API"
 print_step
 
 if [[ -n ${APICAST_POD_STG} ]]; then
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-staging/3scale-echo-api-staging.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-staging/3scale-echo-api-staging.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]]; then
-    timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-production/3scale-echo-api-production.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -k -vvv https://echo-api.3scale.net" > ${DUMP_DIR}/status/apicast-production/3scale-echo-api-production.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
@@ -972,29 +972,31 @@ STEP_DESC="Status: Staging/Production Backend JSON"
 print_step
 
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
 
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
+
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-production-json-debug.txt < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-production-json-debug.txt < /dev/null
 
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
-    timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-production/apicast-staging-json-debug.txt < /dev/null
 
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-production/apicast-staging-json-debug.txt < /dev/null
+
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 
-    timeout 10 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
 
-    timeout 10 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
@@ -1036,21 +1038,21 @@ STEP_DESC="Status: APIcast Certificates"
 print_step
 
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${WILDCARD_POD} ]]; then
-    timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate.txt 2>&1 < /dev/null
 
     sleep 0.5
 
-    timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -showcerts -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate-showcerts.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_STG} #\n' ; echo | openssl s_client -showcerts -servername ${APICAST_ROUTE_STG} -connect ${APICAST_ROUTE_STG}:443" > ${DUMP_DIR}/status/apicast-staging/certificate-showcerts.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]] && [[ -n ${WILDCARD_POD} ]]; then
-    timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_PRD} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_PRD} -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_PRD} #\n' ; echo | openssl s_client -servername ${APICAST_ROUTE_PRD} -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate.txt 2>&1 < /dev/null
 
     sleep 0.5
 
-    timeout 10 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_PRD} #\n' ; echo | openssl s_client -showcerts -servername ${APICAST_ROUTE_PRD} -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate-showcerts.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${WILDCARD_POD} /bin/bash -c "echo -e '\n# Host: ${APICAST_ROUTE_PRD} #\n' ; echo | openssl s_client -showcerts -servername ${APICAST_ROUTE_PRD} -connect ${APICAST_ROUTE_PRD}:443" > ${DUMP_DIR}/status/apicast-production/certificate-showcerts.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
