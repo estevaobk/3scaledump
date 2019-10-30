@@ -7,7 +7,7 @@ COMPRESS_UTIL="${2,,}"
 CURRENT_DIR=$(dirname "$0")
 
 # Avoid fetching information about any pod that is not a 3scale one
-THREEESCALE_PODS=("apicast-production" "apicast-staging" "apicast-wildcard-router" "backend-cron" "backend-listener" "backend-redis" "backend-worker" "system-app" "system-memcache" "system-mysql" "system-redis" "system-resque" "system-sidekiq" "system-sphinx" "zync" "zync-que" "zync-database")
+THREEESCALE_PODS=("3scale-operator" "apicast-production" "apicast-staging" "apicast-wildcard-router" "backend-cron" "backend-listener" "backend-redis" "backend-worker" "system-app" "system-memcache" "system-mysql" "system-redis" "system-resque" "system-sidekiq" "system-sphinx" "zync" "zync-que" "zync-database")
 
 NOW=$(date +"%Y-%m-%d_%H-%M" -u)
 
@@ -340,6 +340,8 @@ STEP_DESC="Fetch: All pods and Events"
 print_step
 
 oc get pod -o wide > ${DUMP_DIR}/status/pods-all.txt 2>&1
+
+oc get pod -o wide --all-namespaces > ${DUMP_DIR}/status/pods-all-namespaces.txt 2>&1
 
 oc get pod -o wide | grep -iv "deploy" > ${DUMP_DIR}/status/pods.txt 2>&1
 
@@ -1095,7 +1097,28 @@ fi
 ((STEP++))
 
 
-# Compact the Directory
+# OCP 4.X Queries #
+
+OCP_VERSION=$(< ${DUMP_DIR}/status/ocp-version.txt grep -i ": 4\|: v4")
+
+OPERATOR=$(< ${DUMP_DIR}/status/pods-all.txt grep -i "3scale-operator")
+
+if [[ -n ${OCP_VERSION} ]] && [[ -n ${OPERATOR} ]]; then
+
+    STEP_DESC="API Manager details"
+    print_step
+
+    oc describe apimanager > ${DUMP_DIR}/status/apimanager.txt 2> ${DUMP_DIR}/temp-cmd.txt
+    detect_error
+
+    oc get apimanager -o yaml > ${DUMP_DIR}/status/apimanager.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+    detect_error
+
+    ((STEP++))
+fi
+
+
+# Compact the Directory #
 
 echo -e "\n# Compacting... #\n"
 
@@ -1110,7 +1133,8 @@ fi
 
 /bin/rm -f ${DUMP_DIR}/temp.txt
 
-# Add the .txt log file if exists
+
+# Add the .txt log file if exists #
 
 if [[ -f ${CURRENT_DIR}/3scale-dump-logs.txt ]]; then
     /bin/cp -f ${CURRENT_DIR}/3scale-dump-logs.txt ${DUMP_DIR}/3scale-dump-logs.txt
