@@ -67,6 +67,11 @@ execute_command() {
         MSG="Variable Not Found: COMMAND"
         print_error
 
+    elif [[ ${RESTRICT} == 1 ]]; then
+        ${COMMAND} | grep -i "${THREESCALE_PROJECT}" 2> ${DUMP_DIR}/temp-cmd.txt | awk '{print $1}' > ${DUMP_DIR}/temp.txt
+
+        detect_error
+
     else
         ${COMMAND} 2> ${DUMP_DIR}/temp-cmd.txt | awk '{print $1}' | tail -n +2 > ${DUMP_DIR}/temp.txt
 
@@ -196,7 +201,7 @@ mgmt_api() {
 }
 
 cleanup() {
-    unset COMMAND COMPRESS NEWDIR NOYAML PREVIOUS SINGLE_FILE SUBSTRING VALIDATE_PODS VERBOSE
+    unset COMMAND COMPRESS NEWDIR NOYAML PREVIOUS RESTRICT SINGLE_FILE SUBSTRING VALIDATE_PODS VERBOSE
 }
 
 cleanup_dir() {
@@ -563,8 +568,9 @@ print_step
 NEWDIR="pv"
 SINGLE_FILE="pv.yaml"
 COMMAND="oc get pv"
+RESTRICT=1
 
-${COMMAND} > ${DUMP_DIR}/status/pv.txt 2> ${DUMP_DIR}/temp-cmd.txt
+${COMMAND} | grep -i "${THREESCALE_PROJECT}" > ${DUMP_DIR}/status/pv.txt 2> ${DUMP_DIR}/temp-cmd.txt
 detect_error
 
 create_dir
@@ -575,6 +581,7 @@ cleanup
 NEWDIR="pv/describe"
 SINGLE_FILE="pv/describe.txt"
 COMMAND="oc get pv"
+RESTRICT=1
 
 create_dir
 execute_command
