@@ -297,15 +297,6 @@ fetch_nodes() {
         sleep 0.5
 
     done < ${DUMP_DIR}/temp.txt
-
-    if [[ ${FIRST_CHECK} == 1 ]]; then
-
-        # The code below doesn't have any 'detect_error' on purpuse to print the final message if needed
-        oc describe node > ${DUMP_DIR}/${FETCH_NODES_DIR}/current.txt 2>&1
-        FORBIDDEN=$(< ${DUMP_DIR}/${FETCH_NODES_DIR}/current.txt grep -i "forbidden")
-
-        FIRST_CHECK=0
-    fi
 }
 
 
@@ -368,6 +359,15 @@ else
 fi
 
 
+# Validate: Permissions
+
+FORBIDDEN=$(oc describe node 2>&1 | grep -i "forbidden")
+
+if [[ -n ${FORBIDDEN} ]]; then
+    echo -e "\nWARNING: It looks like the Red Hat 3scale dump is being executed with an OpenShift user that doesn't have the 'cluster-admin' role. While the information fetched could be already sufficient to troubleshoot the issue regardless of this limitation, it's recommended using elevated privileges if possible (otherwise, please go ahead and proceed anyway). Refer to the section 'Administrator (Recommended)' from the Knowledge Base Article for more information. \n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
+    read TEMP < /dev/tty
+fi
+
 echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
 read TEMP < /dev/tty
 
@@ -397,13 +397,6 @@ print_step
 FIRST_CHECK=1
 
 fetch_nodes
-
-if [[ -n ${FORBIDDEN} ]]; then
-    echo -e "\n####### NOTICE #######\n\nSome cluster related information will not be possible to be retrieved during the dump process. Please refer to the section 'Administrator (Recommended)' from the Knowledge Base Article for more information. In case it's not possible to perform the dump with an elevated level of privilege, the information contained could be already sufficient to troubleshoot the issue regardless of this limitation. Hence, please go ahead and proceed accordingly.\n\n######################\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
-
-    read TEMP < /dev/tty
-fi
-
 
 ((STEP++))
 
