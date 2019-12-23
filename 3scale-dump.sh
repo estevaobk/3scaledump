@@ -1104,25 +1104,24 @@ fi
 ((STEP++))
 
 
-# OCP 4.X Queries #
-
-OCP_VERSION=$(< ${DUMP_DIR}/status/ocp-version.txt grep -i ": 4\|: v4")
+# OCP Operator (4.X only) #
 
 OPERATOR=$(< ${DUMP_DIR}/status/pods-all.txt grep -i "3scale-operator")
 
-if [[ -n ${OCP_VERSION} ]] && [[ -n ${OPERATOR} ]]; then
+if [[ -z ${OPERATOR} ]]; then
+    MSG="\n# NOTE: Ignore errors if OCP < 4.X #\n"
 
-    STEP_DESC="API Manager details"
-    print_step
+    echo -e "${MSG}" > ${DUMP_DIR}/status/apimanager.txt
 
-    oc describe apimanager > ${DUMP_DIR}/status/apimanager.txt 2> ${DUMP_DIR}/temp-cmd.txt
-    detect_error
+    echo -e "${MSG}" > ${DUMP_DIR}/status/apimanager.yaml
 
-    oc get apimanager -o yaml > ${DUMP_DIR}/status/apimanager.yaml 2> ${DUMP_DIR}/temp-cmd.txt
-    detect_error
-
-    ((STEP++))
 fi
+
+oc describe apimanager >> ${DUMP_DIR}/status/apimanager.txt 2>&1
+
+oc get apimanager -o yaml >> ${DUMP_DIR}/status/apimanager.yaml 2>&1
+
+((STEP++))
 
 
 # Compact the Directory #
