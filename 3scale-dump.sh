@@ -1202,7 +1202,10 @@ else
     TARGET_DIR="status/apicast-production"
     cleanup_dir
 
-    TARGET_DIR="status/nodes"
+    TARGET_DIR="status/nodes-before"
+    cleanup_dir
+
+    TARGET_DIR="status/nodes-after"
     cleanup_dir
 
     TARGET_DIR="status/replicationcontrollers"
