@@ -282,7 +282,7 @@ fetch_nodes() {
 
     # TXT (describe) format
 
-    COMMAND="oc get nodes -o wide"
+    COMMAND="oc get nodes -o wide --show-kind --show-labels"
     execute_command
 
     ${COMMAND} > ${DUMP_DIR}/${FETCH_NODES_DIR}.txt 2> ${DUMP_DIR}/temp-cmd.txt
