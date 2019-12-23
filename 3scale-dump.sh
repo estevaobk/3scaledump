@@ -259,6 +259,54 @@ print_step() {
     echo -e "\n${STEP}. ${STEP_DESC}\n"
 }
 
+fetch_nodes() {
+    if [[ ${FIRST_CHECK} == 1 ]]; then
+        FETCH_NODES_DIR="status/nodes-before"
+        FIRST_CHECK=0
+
+    else
+        FETCH_NODES_DIR="status/nodes-after"
+
+    fi
+
+    # YAML format
+
+    NEWDIR="${FETCH_NODES_DIR}"
+    SINGLE_FILE="${FETCH_NODES_DIR}.yaml"
+    COMMAND="oc get nodes -o wide"
+
+    create_dir
+    execute_command
+    read_obj
+    cleanup
+
+    # TXT (describe) format
+
+    COMMAND="oc get nodes -o wide"
+    execute_command
+
+    ${COMMAND} > ${DUMP_DIR}/${FETCH_NODES_DIR}.txt 2> ${DUMP_DIR}/temp-cmd.txt
+    detect_error
+
+    while read NODE; do
+        DESCRIBE=$(oc describe node ${NODE} 2> ${DUMP_DIR}/temp-cmd.txt)
+        detect_error
+
+        echo -e "${DESCRIBE}" > ${DUMP_DIR}/${FETCH_NODES_DIR}/${NODE}.txt
+        echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/${FETCH_NODES_DIR}-describe.txt
+
+        sleep 0.5
+
+    done < ${DUMP_DIR}/temp.txt
+
+    if [[ ${FIRST_CHECK} == 1 ]]; then
+
+        # The code below doesn't have any 'detect_error' on purpuse to print the final message if needed
+        oc describe node > ${DUMP_DIR}/status/nodes/current.txt 2>&1
+        FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
+    fi
+}
+
 
 ########
 # MAIN #
@@ -338,6 +386,26 @@ if [[ ! -d ${DUMP_DIR}/status/apicast-staging ]] || [[ ! -d ${DUMP_DIR}/status/a
 fi
 
 STEP=1
+
+
+# Status: Nodes (First Check) #
+
+STEP_DESC="Status: Nodes (First Check)"
+print_step
+
+FIRST_CHECK=1
+
+fetch_nodes
+
+if [[ -n ${FORBIDDEN} ]]; then
+    echo -e "\n####### NOTICE #######\n\nSome cluster related information will not be possible to be retrieved during the dump process. Please refer to the section 'Administrator (Recommended)' from the Knowledge Base Article for more information. In case it's not possible to perform the dump with an elevated level of privilege, the information contained could be already sufficient to troubleshoot the issue regardless of this limitation. Hence, please go ahead and proceed accordingly.\n\n######################\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
+
+    read TEMP < /dev/tty
+fi
+
+
+((STEP++))
+
 
 # Fetch the status from all the pods and events #
 
@@ -653,48 +721,6 @@ create_dir
 execute_command
 read_obj
 cleanup
-
-((STEP++))
-
-
-# Status: Nodes #
-
-STEP_DESC="Status: Nodes"
-print_step
-
-# YAML format
-
-NEWDIR="status/nodes"
-SINGLE_FILE="status/nodes.yaml"
-COMMAND="oc get nodes -o wide"
-
-create_dir
-execute_command
-read_obj
-cleanup
-
-# TXT (describe) format
-
-COMMAND="oc get nodes -o wide"
-execute_command
-
-${COMMAND} > ${DUMP_DIR}/status/nodes.txt 2> ${DUMP_DIR}/temp-cmd.txt
-detect_error
-
-while read NODE; do
-    DESCRIBE=$(oc describe node ${NODE} 2> ${DUMP_DIR}/temp-cmd.txt)
-    detect_error
-
-    echo -e "${DESCRIBE}" > ${DUMP_DIR}/status/nodes/${NODE}.txt
-    echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/status/nodes-describe.txt
-
-    sleep 0.5
-
-done < ${DUMP_DIR}/temp.txt
-
-# The code below doesn't have any 'detect_error' on purpuse to print the final message if needed
-oc describe node > ${DUMP_DIR}/status/nodes/current.txt 2>&1
-FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
 
 ((STEP++))
 
@@ -1124,6 +1150,18 @@ oc get apimanager -o yaml >> ${DUMP_DIR}/status/apimanager.yaml 2>&1
 ((STEP++))
 
 
+# Status: Nodes (Last Check) #
+
+STEP_DESC="Status: Nodes (Last Check)"
+print_step
+
+FIRST_CHECK=0
+
+fetch_nodes
+
+((STEP++))
+
+
 # Compact the Directory #
 
 echo -e "\n# Compacting... #\n"
@@ -1249,10 +1287,6 @@ else
     if [[ -d ${DUMP_DIR} ]]; then
         echo -e "\nPlease remove manually the temporary directory: ${DUMP_DIR}\n"
     fi
-
-    if [[ -n ${FORBIDDEN} ]]; then
-        echo -e "\n####### NOTICE #######\n\nSome cluster related information was not possible to be retrieved during the dump process. Please refer to the section 'Administrator (Recommended)' from the Knowledge Base Article for more information. In case it's not possible to perform the dump with an elevated level of privilege, the information contained could be already sufficient to troubleshoot the issue regardless of this limitation. Hence, please go ahead and attach it on the Case.\n\n######################\n"
-    fi
-    
+   
     exit 0
 fi
