@@ -982,30 +982,30 @@ print_step
 
 if [[ -n ${APICAST_POD_STG} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
 
-    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/staging.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-staging-json-debug.txt < /dev/null
 
-    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/apicast-staging-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -vvv -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-staging/staging-json-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 
-    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-production-json-debug.txt < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/production.json 2> ${DUMP_DIR}/status/apicast-staging/apicast-production-json-debug.txt < /dev/null
 
-    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/apicast-production-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -vvv ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-staging/production-json-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
 
 if [[ -n ${APICAST_POD_PRD} ]] && [[ -n ${SYSTEM_APP_POD} ]]; then
 
-    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging.json 2> ${DUMP_DIR}/status/apicast-production/apicast-staging-json-debug.txt < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/staging.json 2> ${DUMP_DIR}/status/apicast-production/apicast-staging-json-debug.txt < /dev/null
 
-    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/apicast-staging-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -vvv -k ${THREESCALE_PORTAL_ENDPOINT}/staging.json" > ${DUMP_DIR}/status/apicast-production/staging-json-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 
-    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_PRD} /bin/bash -c "curl -X GET -H 'Accept: application/json' -k ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/production.json 2> ${DUMP_DIR}/status/apicast-production/apicast-production-json-debug.txt < /dev/null
 
-    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -v ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/apicast-production-verbose.txt 2>&1 < /dev/null
+    timeout 15 oc rsh ${APICAST_POD_STG} /bin/bash -c "curl -X GET -k -vvv ${THREESCALE_PORTAL_ENDPOINT}/production.json" > ${DUMP_DIR}/status/apicast-production/production-json-verbose.txt 2>&1 < /dev/null
 
     sleep 0.5
 fi
