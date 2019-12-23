@@ -281,11 +281,10 @@ fetch_nodes() {
 
     # TXT (describe) format
 
-    COMMAND="oc get nodes -o wide --show-kind --show-labels"
-    execute_command
+    oc get nodes -o wide --show-kind --show-labels > ${DUMP_DIR}/${FETCH_NODES_DIR}.txt 2>&1
 
-    ${COMMAND} > ${DUMP_DIR}/${FETCH_NODES_DIR}.txt 2> ${DUMP_DIR}/temp-cmd.txt
-    detect_error
+    COMMAND="oc get nodes -o wide"
+    execute_command
 
     while read NODE; do
         DESCRIBE=$(oc describe node ${NODE} 2> ${DUMP_DIR}/temp-cmd.txt)
