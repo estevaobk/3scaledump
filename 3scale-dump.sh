@@ -301,8 +301,8 @@ fetch_nodes() {
     if [[ ${FIRST_CHECK} == 1 ]]; then
 
         # The code below doesn't have any 'detect_error' on purpuse to print the final message if needed
-        oc describe node > ${DUMP_DIR}/status/nodes/current.txt 2>&1
-        FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
+        oc describe node > ${DUMP_DIR}/${FETCH_NODES_DIR}/current.txt 2>&1
+        FORBIDDEN=$(< ${DUMP_DIR}/${FETCH_NODES_DIR}/current.txt grep -i "forbidden")
 
         FIRST_CHECK=0
     fi
