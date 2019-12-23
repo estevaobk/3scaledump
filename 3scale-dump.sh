@@ -262,7 +262,6 @@ print_step() {
 fetch_nodes() {
     if [[ ${FIRST_CHECK} == 1 ]]; then
         FETCH_NODES_DIR="status/nodes-before"
-        FIRST_CHECK=0
 
     else
         FETCH_NODES_DIR="status/nodes-after"
@@ -304,6 +303,8 @@ fetch_nodes() {
         # The code below doesn't have any 'detect_error' on purpuse to print the final message if needed
         oc describe node > ${DUMP_DIR}/status/nodes/current.txt 2>&1
         FORBIDDEN=$(< ${DUMP_DIR}/status/nodes/current.txt grep -i "forbidden")
+
+        FIRST_CHECK=0
     fi
 }
 
