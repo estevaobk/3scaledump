@@ -367,7 +367,25 @@ if [[ -n ${FORBIDDEN} ]]; then
     read TEMP < /dev/tty
 fi
 
-echo -e "\nNOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
+
+# Case Number
+
+echo -ne "Please enter the number of the Red Hat Case which this dump belongs to (Optional): "
+read CASE < /dev/tty
+
+if [[ -n ${CASE} ]]; then
+    echo -e "\nCase: ${CASE}.\n"
+
+    DUMP_DIR="${CURRENT_DIR}/${CASE}-3scale-dump-${NOW}"
+
+    DUMP_FILE="${DUMP_DIR}.tar"
+
+else
+    echo -e "\nNOTE: No Case has been specified. Proceeding anyway.\n"
+fi
+
+
+echo -e "NOTE: A temporary directory will be created in order to store the information about the 3scale dump: ${DUMP_DIR}\n\nPress [ENTER] to continue or <Ctrl + C> to abort...\n"
 read TEMP < /dev/tty
 
 
