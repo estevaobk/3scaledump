@@ -11,7 +11,7 @@ THREEESCALE_PODS=("3scale-operator" "apicast-production" "apicast-staging" "apic
 
 NOW=$(date +"%Y-%m-%d_%H-%M" -u)
 
-DUMP_DIR="${CURRENT_DIR}/3scale-dump-${NOW}"
+DUMP_DIR="${CURRENT_DIR}/3scale_dump-${NOW}"
 
 DUMP_FILE="${DUMP_DIR}.tar"
 
@@ -376,7 +376,7 @@ read CASE < /dev/tty
 if [[ -n ${CASE} ]]; then
     echo -e "\nCase: ${CASE}.\n"
 
-    DUMP_DIR="${CURRENT_DIR}/${CASE}-3scale-dump-${NOW}"
+    DUMP_DIR="${CURRENT_DIR}/${CASE}-3scale_dump-${NOW}"
 
     DUMP_FILE="${DUMP_DIR}.tar"
 
