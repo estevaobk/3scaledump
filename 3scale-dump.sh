@@ -433,6 +433,12 @@ oc get pod -o wide | grep -i "deploy" > ${DUMP_DIR}/status/pods-deploy.txt 2>&1
 
 oc get event > ${DUMP_DIR}/status/events.txt 2>&1
 
+oc get event -o yaml > ${DUMP_DIR}/status/events.yaml 2>&1
+
+oc get event --all-namespaces > ${DUMP_DIR}/status/events-all-namespaces.txt 2>&1
+
+oc get event --all-namespaces -o yaml > ${DUMP_DIR}/status/events-all-namespaces.yaml 2>&1
+
 oc version > ${DUMP_DIR}/status/ocp-version.txt 2>&1
 
 ((STEP++))
@@ -635,6 +641,38 @@ create_dir
 execute_command
 read_obj
 cleanup
+
+((STEP++))
+
+
+# Pods #
+
+STEP_DESC="Fetch: Pods"
+print_step
+
+NEWDIR="pods"
+SINGLE_FILE="pods.txt"
+create_dir
+
+COMMAND="oc get pod"
+execute_command
+
+while read POD; do
+    DESCRIBE=$(oc describe pod ${POD} 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
+
+    echo -e "${DESCRIBE}" > ${DUMP_DIR}/pods/${POD}.txt
+    echo -e "${DESCRIBE}\n" >> ${DUMP_DIR}/pods.txt
+
+    GET_POD=$(oc get pod ${POD} -o yaml 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
+
+    echo -e "${GET_POD}" > ${DUMP_DIR}/pods/${POD}.yaml
+    echo -e "${GET_POD}\n" >> ${DUMP_DIR}/pods.yaml
+
+    sleep 0.5
+
+done < ${DUMP_DIR}/temp.txt
 
 ((STEP++))
 
@@ -1276,6 +1314,9 @@ else
     cleanup_dir
 
     TARGET_DIR="configmaps"
+    cleanup_dir
+
+    TARGET_DIR="pods"
     cleanup_dir
 
     TARGET_DIR="pv/describe"
