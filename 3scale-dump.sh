@@ -463,6 +463,32 @@ cleanup
 ((STEP++))
 
 
+# DeploymentConfig Environment Variables #
+
+STEP_DESC="Fetch: DeploymentConfig (Environment Variables)"
+print_step
+
+NEWDIR="dc/env"
+SINGLE_FILE="env.txt"
+COMMAND="oc get dc"
+
+create_dir
+execute_command
+
+while read DC; do
+    ENV=$(oc set env dc/${DC} --list 2> ${DUMP_DIR}/temp-cmd.txt)
+    detect_error
+
+    echo -e "${ENV}" > ${DUMP_DIR}/dc/env/${DC}.txt
+    echo -e "${ENV}\n" >> ${DUMP_DIR}/dc/env.txt
+
+    sleep 0.25
+
+done < ${DUMP_DIR}/temp.txt
+
+((STEP++))
+
+
 # Fetch and compress the logs #
 
 STEP_DESC="Fetch: Logs"
@@ -1268,6 +1294,9 @@ else
     cleanup_dir
 
     TARGET_DIR="status"
+    cleanup_dir
+
+    TARGET_DIR="dc/env"
     cleanup_dir
 
     TARGET_DIR="dc"
