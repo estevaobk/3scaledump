@@ -9,7 +9,7 @@ CURRENT_DIR=$(dirname "$0")
 # Avoid fetching information about any pod that is not a 3scale one
 THREEESCALE_PODS=("3scale-operator" "apicast-production" "apicast-staging" "apicast-wildcard-router" "backend-cron" "backend-listener" "backend-redis" "backend-worker" "system-app" "system-memcache" "system-mysql" "system-redis" "system-resque" "system-sidekiq" "system-sphinx" "zync" "zync-que" "zync-database")
 
-NOW=$(date +"%Y-%m-%d_%H-%M" -u)
+NOW=$(date -u +"%Y-%m-%d_%H-%M")
 
 DUMP_DIR="${CURRENT_DIR}/3scale_dump-${NOW}"
 
