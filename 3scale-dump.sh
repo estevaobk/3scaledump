@@ -328,10 +328,10 @@ cleanup
 # Build the shell script to uncompress all logs according to the util (gzip, xz) being used
 
 if [[ ${COMPRESS_UTIL} == "xz" ]]; then
-    echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+    echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\nmv $(echo "${FILE}" | cut -f 1 -d '.') $(echo "${FILE}" | cut -f 1 -d '.').log \ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
 
 else
-    echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
+    echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\nmv $(echo "${FILE}" | cut -f 1 -d '.') $(echo "${FILE}" | cut -f 1 -d '.').log \ndone' > ${DUMP_DIR}/logs/uncompress-logs.sh
 fi
 
 chmod +x ${DUMP_DIR}/logs/uncompress-logs.sh
