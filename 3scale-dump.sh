@@ -1011,6 +1011,20 @@ detect_error
 ((STEP++))
 
 
+# Status: Build Configs #
+
+STEP_DESC="Status: Build Configs"
+print_step
+
+oc get buildconfigs -o yaml > ${DUMP_DIR}/status/buildconfigs.yaml 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+oc get buildconfigs -o wide > ${DUMP_DIR}/status/buildconfigs.txt 2> ${DUMP_DIR}/temp-cmd.txt
+detect_error
+
+((STEP++))
+
+
 # Variables used on the next steps #
 
 APICAST_POD_STG=$(oc get pod | grep -i "apicast-staging" | grep -i "running" | grep -iv "deploy" | head -n 1 | awk '{print $1}')
