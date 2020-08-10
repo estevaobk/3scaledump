@@ -427,9 +427,11 @@ oc get pod -o wide > ${DUMP_DIR}/status/pods-all.txt 2>&1
 
 oc get pod -o wide --all-namespaces > ${DUMP_DIR}/status/pods-all-namespaces.txt 2>&1
 
-oc get pod -o wide | grep -iv "deploy" > ${DUMP_DIR}/status/pods.txt 2>&1
+oc get pod -o wide | grep -iv "deploy" | grep -iv "Evicted" | grep -iv "MatchNodeSelector" > ${DUMP_DIR}/status/pods.txt 2>&1
 
 oc get pod -o wide | grep -i "deploy" > ${DUMP_DIR}/status/pods-deploy.txt 2>&1
+
+oc get pod -o wide | grep -i "Evicted\|MatchNodeSelector" > ${DUMP_DIR}/status/pods-misc.txt 2>&1
 
 oc get event > ${DUMP_DIR}/status/events.txt 2>&1
 
@@ -533,6 +535,41 @@ read_obj
 cleanup
 
 
+# Misc Logs #
+
+LINES=$(cat ${DUMP_DIR}/status/pods-misc.txt | wc -l)
+
+if [[ ! "${LINES}" == "0" ]]; then
+
+    echo -e "\n\n\t# Other pod logs #\n"
+
+    NEWDIR="logs/misc"
+    SINGLE_FILE="logs-misc.txt"
+    COMMAND="oc get pod"
+
+    VALIDATE_PODS=1
+    SUBSTRING=1
+    COMPRESS=1
+    VERBOSE=1
+    NOYAML=1
+
+    cat ${DUMP_DIR}/status/pods-misc.txt | awk '{print $1}' > ${DUMP_DIR}/temp.txt
+
+    create_dir
+    read_obj
+    cleanup
+
+    if [[ ${COMPRESS_UTIL} == "xz" ]]; then
+        echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n mv $(echo "${FILE}" | cut -f 1 -d '.') $(echo "${FILE}" | cut -f 1 -d '.').log \ndone' > ${DUMP_DIR}/logs/misc/uncompress-logs.sh
+
+    else
+        echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n mv $(echo "${FILE}" | cut -f 1 -d '.') $(echo "${FILE}" | cut -f 1 -d '.').log \ndone' > ${DUMP_DIR}/logs/misc/uncompress-logs.sh
+    fi
+
+    chmod +x ${DUMP_DIR}/logs/misc/uncompress-logs.sh
+fi
+
+
 # Build the shell script to uncompress all logs according to the util (gzip, xz) being used
 
 if [[ ${COMPRESS_UTIL} == "xz" ]]; then
@@ -574,10 +611,10 @@ if [[ -n ${DEPLOY_PODS} ]]; then
     cleanup
 
     if [[ ${COMPRESS_UTIL} == "xz" ]]; then
-        echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n\ndone' > ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
+        echo -e '#!/bin/bash\n\nfor FILE in *.xz; do\n\txz -d ${FILE}\n mv $(echo "${FILE}" | cut -f 1 -d '.') $(echo "${FILE}" | cut -f 1 -d '.').log \ndone' > ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
 
     else
-        echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n\ndone' > ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
+        echo -e '#!/bin/bash\n\nfor FILE in *.gz; do\n\tgunzip ${FILE}\n mv $(echo "${FILE}" | cut -f 1 -d '.') $(echo "${FILE}" | cut -f 1 -d '.').log \ndone' > ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
     fi
 
     chmod +x ${DUMP_DIR}/logs/deploy/uncompress-logs.sh
