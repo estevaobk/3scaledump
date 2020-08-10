@@ -645,6 +645,8 @@ cleanup
 STEP_DESC="Fetch: Routes"
 print_step
 
+oc get route > ${DUMP_DIR}/routes.txt
+
 NEWDIR="routes"
 SINGLE_FILE="routes.yaml"
 COMMAND="oc get route"
