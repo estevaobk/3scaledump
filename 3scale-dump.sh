@@ -964,6 +964,16 @@ detect_error
 
 # Status: Host Subnet #
 
+STEP_DESC="OpenShift Top Nodes"
+print_step
+
+oc adm top node > ${DUMP_DIR}/status/openshift-nodes 2>&1
+
+oc adm top pods > ${DUMP_DIR}/status/openshift-pods 2>&1
+
+
+# Status: Host Subnet #
+
 STEP_DESC="Status: Host Subnet"
 print_step
 
