@@ -962,7 +962,7 @@ detect_error
 ((STEP++))
 
 
-# Status: Host Subnet #
+# Status: OpenShift Nodes #
 
 STEP_DESC="OpenShift Top Nodes"
 print_step
